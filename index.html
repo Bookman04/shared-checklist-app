@@ -67,8 +67,10 @@
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; }
+      html { overflow-x: clip; }
       body {
         margin: 0;
+        overflow-x: clip;
         font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
         background: linear-gradient(180deg, var(--bg) 0%, var(--bg-grad) 100%);
         color: var(--ink);
@@ -83,10 +85,24 @@
       /* ---------- Top strip ---------- */
       .topstrip {
         display: flex; align-items: center; justify-content: space-between;
-        gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+        gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
       }
       .topstrip .summary { font-size: 14px; color: var(--muted); font-weight: 600; }
       .topstrip .summary strong { color: var(--ink); font-weight: 800; }
+      .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+      /* ---------- Search ---------- */
+      .searchbar { position: relative; margin-bottom: 16px; }
+      .searchbar svg {
+        position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+        width: 18px; height: 18px; color: var(--muted); pointer-events: none;
+      }
+      .searchbar .input { padding-left: 42px; padding-right: 76px; border-radius: 999px; background: var(--surface); }
+      .searchbar .search-clear {
+        position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+        display: none;
+      }
+      .searchbar.has-query .search-clear { display: inline-flex; }
 
       /* ---------- Buttons ---------- */
       .btn {
@@ -145,6 +161,8 @@
       .nav-item .nav-name { font-weight: 700; font-size: 14.5px; line-height: 1.3; overflow-wrap: anywhere; }
       .nav-item .nav-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; font-weight: 600; }
       .nav-item.active .nav-meta { color: var(--accent-soft-ink); opacity: 0.85; }
+      .nav-item.archived-item { opacity: 0.72; }
+      .nav-item .nav-restore { align-self: flex-start; flex: none; }
       .nav-star {
         align-self: flex-start; width: 28px; height: 28px; border-radius: 8px;
         display: inline-flex; align-items: center; justify-content: center;
@@ -159,8 +177,20 @@
         text-transform: uppercase; color: var(--gold); background: var(--gold-soft);
         border-radius: 999px; padding: 2px 8px; margin-top: 5px;
       }
+      .archived-tag {
+        display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--muted); background: var(--surface-3);
+        border-radius: 999px; padding: 2px 8px; margin-top: 5px;
+      }
       .nav-empty { padding: 18px 10px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
       .sidebar .btn-new { width: 100%; justify-content: center; margin-top: 12px; }
+      .archived-head {
+        display: flex; align-items: center; gap: 8px; width: 100%;
+        margin: 16px 0 8px; padding: 6px 4px; background: transparent; border: none;
+        font-size: 12.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted);
+      }
+      .archived-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+      .archived-head svg { width: 15px; height: 15px; }
       .mini-progress { height: 5px; border-radius: 999px; background: var(--surface-3); margin-top: 8px; overflow: hidden; }
       .mini-progress > div { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
 
@@ -174,17 +204,66 @@
       .detail-title-wrap { min-width: 0; flex: 1; }
       .detail-title { font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0; overflow-wrap: anywhere; letter-spacing: -0.01em; }
       .detail-sub { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-      .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
       .badge-default {
         display: inline-flex; align-items: center; gap: 6px;
         font-size: 12px; font-weight: 800; color: var(--gold);
         background: var(--gold-soft); border-radius: 999px; padding: 4px 11px;
       }
       .badge-default svg { width: 13px; height: 13px; fill: currentColor; }
+      .badge-archived {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 12px; font-weight: 800; color: var(--muted);
+        background: var(--surface-3); border-radius: 999px; padding: 4px 11px;
+      }
+      .badge-archived svg { width: 13px; height: 13px; }
       .progress-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
       .progress-track { flex: 1; height: 9px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
       .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
       .progress-label { font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+      /* ---------- Export menu ---------- */
+      .export-wrap { position: relative; max-width: 100%; }
+      .export-menu {
+        position: absolute; right: 0; left: auto; top: calc(100% + 6px); z-index: 40;
+        background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+        box-shadow: var(--shadow-lg); padding: 6px;
+        width: max-content; min-width: 210px;
+        max-width: min(280px, calc(100vw - 24px));
+        display: none;
+      }
+      .export-menu.open { display: block; }
+      .export-menu.align-left { left: 0; right: auto; }
+      .export-menu button {
+        display: flex; align-items: center; gap: 10px; width: 100%;
+        background: transparent; border: none; border-radius: 8px;
+        padding: 9px 11px; font-size: 14px; font-weight: 650; text-align: left;
+        white-space: nowrap;
+      }
+      .export-menu button:hover { background: var(--surface-2); }
+      .export-menu button svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+
+      /* ---------- Filters ---------- */
+      .filter-row {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        margin-top: 18px; padding: 10px; background: var(--surface-2);
+        border: 1px solid var(--line); border-radius: 12px;
+      }
+      .filter-row .filter-label { font-size: 12.5px; font-weight: 800; color: var(--muted); margin-right: 2px; }
+      .chip {
+        border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink-2);
+        border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      }
+      .chip:hover { background: var(--surface-3); }
+      .chip.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+      .filter-select {
+        border: 1.5px solid var(--line-strong); border-radius: 999px; background: var(--surface);
+        padding: 6px 10px; font-size: 13px; font-weight: 700;
+        min-width: 0; max-width: min(100%, calc(100vw - 48px));
+        flex: 1 1 150px; text-overflow: ellipsis;
+      }
+      .filter-count { font-size: 12.5px; font-weight: 700; color: var(--muted); margin-left: auto; }
 
       /* ---------- Add item form ---------- */
       .add-card {
@@ -197,12 +276,14 @@
       .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 5px; }
       .field label .opt { font-weight: 600; opacity: 0.75; }
       .input, .textarea {
-        width: 100%; border: 1.5px solid var(--line-strong); border-radius: 10px;
+        width: 100%; min-width: 0; max-width: 100%; border: 1.5px solid var(--line-strong); border-radius: 10px;
         background: var(--surface); padding: 10px 12px; font-size: 15px;
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
       .input:focus, .textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus); }
       .textarea { resize: vertical; min-height: 40px; }
+      select.input { appearance: auto; }
+      input[type="date"].input { min-height: 44px; }
       .add-card .btn { margin-top: 12px; }
 
       /* ---------- Items ---------- */
@@ -225,6 +306,8 @@
       .item.dragging { opacity: 0.45; }
       .item.drag-over { border-color: var(--accent); background: var(--accent-soft); }
       .item.done { background: var(--surface-2); }
+      .item.overdue { border-color: var(--danger); background: var(--danger-soft); }
+      .item.overdue:hover { border-color: var(--danger); }
       .grip {
         color: var(--muted); cursor: grab; padding: 8px 2px 0; flex: none;
         display: inline-flex; touch-action: none;
@@ -248,6 +331,19 @@
       .item.done .item-text { text-decoration: line-through; color: var(--muted); }
       .item-detail { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin-top: 3px; overflow-wrap: anywhere; white-space: pre-wrap; }
       .item.done .item-detail { color: var(--muted); opacity: 0.8; }
+      .item-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+      .meta-badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 3px 9px;
+        background: var(--surface-3); color: var(--ink-2);
+      }
+      .meta-badge svg { width: 12px; height: 12px; }
+      .meta-badge.due-overdue { background: var(--danger); color: #ffffff; }
+      @media (prefers-color-scheme: dark) { .meta-badge.due-overdue { color: #1c0b09; } }
+      .meta-badge.due-today { background: var(--gold-soft); color: var(--gold); }
+      .meta-badge.pri-high { background: var(--danger-soft); color: var(--danger); }
+      .meta-badge.pri-medium { background: var(--gold-soft); color: var(--gold); }
+      .meta-badge.pri-low { background: var(--surface-3); color: var(--muted); }
       .item-tools { display: flex; flex-direction: column; align-items: center; gap: 1px; flex: none; }
       .item-tools .row-tools { display: flex; gap: 1px; }
       .move-stack { display: flex; flex-direction: column; }
@@ -262,23 +358,54 @@
       .items-empty { text-align: center; padding: 34px 16px; color: var(--muted); }
       .items-empty p { margin: 0; font-size: 14.5px; line-height: 1.6; }
 
+      /* ---------- Search results ---------- */
+      .search-result-group { margin-top: 18px; }
+      .search-result-group h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+      .search-result {
+        display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+        background: var(--surface); border: 1.5px solid var(--line); border-radius: 11px;
+        padding: 10px 12px; margin-bottom: 7px; font-size: 14.5px; font-weight: 650;
+      }
+      .search-result:hover { border-color: var(--accent); background: var(--accent-soft); }
+      .search-result .sr-state { font-size: 12px; font-weight: 800; color: var(--muted); margin-left: auto; flex: none; }
+      .search-result .sr-box {
+        flex: none; width: 20px; height: 20px; background: #ffffff; border: 3px solid #000000;
+        border-radius: 5px; display: inline-flex; align-items: center; justify-content: center;
+      }
+      .search-result .sr-box svg { width: 13px; height: 13px; }
+
       /* ---------- Big empty state ---------- */
       .empty-state { text-align: center; padding: 46px 20px 40px; }
       .empty-art { display: inline-flex; margin-bottom: 20px; }
       .empty-state h2 { font-size: 24px; font-weight: 800; margin: 0 0 10px; letter-spacing: -0.01em; }
       .empty-state p { color: var(--muted); font-size: 15px; line-height: 1.65; margin: 0 auto 22px; max-width: 420px; }
+      .empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+      /* ---------- Templates ---------- */
+      .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+      .template-card {
+        text-align: left; background: var(--surface-2); border: 1.5px solid var(--line);
+        border-radius: 13px; padding: 14px; transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      .template-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+      .template-card .tpl-name { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+      .template-card .tpl-name svg { width: 17px; height: 17px; color: var(--accent); flex: none; }
+      .template-card .tpl-meta { font-size: 12.5px; color: var(--muted); font-weight: 600; margin-top: 5px; line-height: 1.5; }
 
       /* ---------- Modal ---------- */
       .modal-overlay {
         position: fixed; inset: 0; background: rgba(10, 18, 13, 0.55);
         display: none; align-items: center; justify-content: center;
         padding: 18px; z-index: 50; backdrop-filter: blur(2px);
+        overflow-y: auto;
       }
       .modal-overlay.open { display: flex; }
       .modal {
         background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-lg);
         width: 100%; max-width: 430px; padding: 24px; border: 1px solid var(--line);
+        margin: auto;
       }
+      .modal.wide { max-width: 560px; }
       .modal h3 { margin: 0 0 8px; font-size: 19px; font-weight: 800; }
       .modal p { margin: 0 0 16px; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
       .modal .field { margin-bottom: 16px; }
@@ -287,15 +414,59 @@
       @media (prefers-color-scheme: dark) { .btn-danger-solid { color: #1c0b09; background: var(--danger); } }
       .btn-danger-solid:hover { background: var(--danger-hover); }
 
+      /* ---------- Print preview sheet ---------- */
+      .print-sheet { color: #111; font-size: 14px; line-height: 1.55; }
+      .print-sheet h2 { font-size: 22px; margin: 0 0 4px; color: #111; }
+      .print-sheet .ps-meta { color: #555; font-size: 12.5px; margin-bottom: 16px; }
+      .print-sheet h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin: 16px 0 6px; color: #333; }
+      .print-sheet ul { list-style: none; margin: 0; padding: 0; }
+      .print-sheet li { display: flex; gap: 9px; padding: 5px 0; border-bottom: 1px solid #e3e3e3; align-items: flex-start; }
+      .print-sheet .ps-box {
+        flex: none; width: 17px; height: 17px; margin-top: 2px; background: #fff;
+        border: 2.5px solid #000; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;
+      }
+      .print-sheet .ps-box svg { width: 11px; height: 11px; }
+      .print-sheet .ps-done { text-decoration: line-through; color: #666; }
+      .print-sheet .ps-note { color: #555; font-size: 12.5px; }
+      #printSheet { display: none; }
+
+      /* ---------- Download ready modal ---------- */
+      .download-file-card {
+        display: flex; align-items: center; gap: 12px;
+        border: 1.5px solid var(--line-strong); border-radius: 12px;
+        background: var(--surface-2); padding: 12px 14px; margin-bottom: 12px;
+      }
+      .download-file-card svg { width: 26px; height: 26px; color: var(--accent); flex: none; }
+      .download-file-card .df-name { font-weight: 800; font-size: 14.5px; overflow-wrap: anywhere; line-height: 1.3; }
+      .download-file-card .df-meta { font-size: 12.5px; color: var(--muted); font-weight: 650; margin-top: 2px; }
+      .download-preview {
+        border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+        padding: 11px 12px; margin: 0 0 14px; max-height: 150px; overflow: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+        color: var(--ink-2); text-align: left;
+      }
+      .download-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+      .download-actions .btn { width: 100%; justify-content: center; }
+      .download-help { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
+      .download-help strong { color: var(--ink-2); }
+
       /* ---------- Toast ---------- */
       .toast {
         position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 16px);
         background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 700;
-        padding: 11px 20px; border-radius: 999px; box-shadow: var(--shadow-lg);
+        padding: 11px 14px 11px 20px; border-radius: 999px; box-shadow: var(--shadow-lg);
         opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
         z-index: 60; max-width: calc(100vw - 32px); text-align: center;
+        display: flex; align-items: center; gap: 12px;
       }
       .toast.show { opacity: 1; transform: translate(-50%, 0); }
+      .toast.show.has-action { pointer-events: auto; }
+      .toast .toast-action {
+        background: var(--bg); color: var(--ink); border: none; border-radius: 999px;
+        padding: 5px 14px; font-size: 13.5px; font-weight: 800; flex: none;
+      }
+      .toast .toast-action:hover { opacity: 0.85; }
 
       .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -308,19 +479,59 @@
         .detail { padding: 18px 15px; }
         .detail-title { font-size: 22px; }
         .add-row-2 { grid-template-columns: 1fr; }
+        .template-grid { grid-template-columns: 1fr; }
         .item { padding: 11px 9px 11px 11px; gap: 9px; }
         .check { width: 36px; height: 36px; }
         .grip { display: none; }
+        .filter-count { margin-left: 0; width: 100%; }
+        /* Detail actions wrap under the title on phones, so Export sits at the
+           left edge. Anchor its menu to the LEFT edge of the button there —
+           right:0 would push a 210px+ menu past the left viewport edge. */
+        .detail-head { flex-direction: column; }
+        .detail-actions { max-width: 100%; }
+        .detail-actions .btn { max-width: 100%; }
+        .export-wrap { flex: none; }
+        .export-menu {
+          left: 0; right: auto;
+          min-width: 0;
+          width: min(264px, calc(100vw - 24px));
+          max-width: calc(100vw - 24px);
+        }
+        .export-menu button { white-space: nowrap; }
+        .filter-select { flex: 1 1 100%; width: 100%; }
+        .filter-row { max-width: 100%; }
+        .modal { max-width: calc(100vw - 36px); }
+        .modal-overlay { padding: 12px; }
+      }
+      @media (max-width: 380px) {
+        /* Menu sits 28px in from the viewport edge (app + detail padding),
+           so its width must leave room for that offset plus 12px right padding. */
+        .export-menu { width: min(264px, calc(100vw - 52px)); }
+        .top-actions, .detail-actions { gap: 6px; }
       }
       @media (prefers-reduced-motion: reduce) {
         * { transition: none !important; }
       }
       @media print {
-        .sidebar, .add-card, .topstrip, .detail-actions, .item-tools, .items-head .btn { display: none !important; }
-        .layout { grid-template-columns: 1fr; }
-        body { background: #fff; }
-        .detail { border: none; box-shadow: none; }
-        .check { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { background: #fff !important; }
+        body.printing-sheet .app,
+        body.printing-sheet .toast,
+        body.printing-sheet .modal-overlay { display: none !important; }
+        body.printing-sheet #printSheet {
+          display: block !important; padding: 24px; max-width: 720px; margin: 0 auto;
+        }
+        body:not(.printing-sheet) .sidebar,
+        body:not(.printing-sheet) .add-card,
+        body:not(.printing-sheet) .topstrip,
+        body:not(.printing-sheet) .searchbar,
+        body:not(.printing-sheet) .filter-row,
+        body:not(.printing-sheet) .detail-actions,
+        body:not(.printing-sheet) .item-tools,
+        body:not(.printing-sheet) .items-head .btn,
+        body:not(.printing-sheet) .grip { display: none !important; }
+        body:not(.printing-sheet) .layout { grid-template-columns: 1fr; }
+        body:not(.printing-sheet) .detail { border: none; box-shadow: none; }
+        .check, .print-sheet .ps-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       }
     </style>
   </head>
@@ -328,10 +539,22 @@
     <div class="app">
       <div class="topstrip">
         <div class="summary" id="summaryLine">No checklists yet</div>
-        <button class="btn btn-primary" id="topNewBtn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          New checklist
-        </button>
+        <div class="top-actions">
+          <button class="btn btn-outline" id="undoBtn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+            Undo
+          </button>
+          <button class="btn btn-primary" id="topNewBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New checklist
+          </button>
+        </div>
+      </div>
+
+      <div class="searchbar" id="searchbar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input class="input" id="globalSearch" type="search" placeholder="Search items across all your lists…" aria-label="Search items across all lists" autocomplete="off" />
+        <button class="btn btn-ghost btn-sm search-clear" id="searchClear" type="button">Clear</button>
       </div>
 
       <div class="layout">
@@ -345,13 +568,14 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             New checklist
           </button>
+          <div id="archivedRegion"></div>
         </aside>
 
         <main class="detail" id="detailRegion" aria-live="polite"></main>
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Generic modal -->
     <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal">
         <h3 id="modalTitle"></h3>
@@ -364,7 +588,64 @@
       </div>
     </div>
 
-    <div class="toast" id="toast" role="status"></div>
+    <!-- Template picker -->
+    <div class="modal-overlay" id="templateOverlay" role="dialog" aria-modal="true" aria-labelledby="templateTitle">
+      <div class="modal wide">
+        <h3 id="templateTitle">Start a new checklist</h3>
+        <p>Start blank, or pick a ready-made list and make it your own. You can rename it and change any item after it is created.</p>
+        <div class="template-grid" id="templateGrid"></div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" id="templateCancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="templateBlank" type="button">Start blank</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Print preview -->
+    <div class="modal-overlay" id="printOverlay" role="dialog" aria-modal="true" aria-labelledby="printTitle">
+      <div class="modal wide">
+        <h3 id="printTitle">Print preview</h3>
+        <p>This is the clean copy. To print it, press Ctrl+P (Cmd+P on a Mac) or use your browser's Print command while this preview is open, and only this copy will print. You can also download it as a PDF instead.</p>
+        <div class="print-sheet" id="printPreview" style="border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; max-height:50vh; overflow-y:auto;"></div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" id="printClose" type="button">Close</button>
+          <button class="btn btn-primary" id="printPdfBtn" type="button">Download PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download ready: proof the file was generated, plus save options that work on phones -->
+    <div class="modal-overlay" id="downloadOverlay" role="dialog" aria-modal="true" aria-labelledby="downloadTitle">
+      <div class="modal">
+        <h3 id="downloadTitle">Your file is ready</h3>
+        <p id="downloadIntro">The file below was generated from your checklist. A download was started for it. If you cannot find it, use one of the save options below.</p>
+        <div class="download-file-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+          <div style="min-width:0;">
+            <div class="df-name" id="downloadFileName">checklist.txt</div>
+            <div class="df-meta" id="downloadFileMeta">Generated just now</div>
+          </div>
+        </div>
+        <pre class="download-preview" id="downloadPreview" aria-label="Preview of the generated file"></pre>
+        <div class="download-actions">
+          <button class="btn btn-primary" id="downloadShareBtn" type="button">Share / Save to Files</button>
+          <button class="btn btn-outline" id="downloadAgainBtn" type="button">Download again</button>
+          <button class="btn btn-outline" id="downloadOpenBtn" type="button">Open the file</button>
+          <button class="btn btn-outline" id="downloadCopyBtn" type="button" style="display:none;">Copy the text instead</button>
+        </div>
+        <p class="download-help" id="downloadHelp"><strong>Where to look:</strong> on iPhone, check the Files app under Downloads, or tap <strong>Share / Save to Files</strong> above and choose Save to Files. On Android and desktop Chrome, check the Downloads folder for the file name shown above.</p>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button class="btn btn-outline" id="downloadCloseBtn" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="printSheet" class="print-sheet" aria-hidden="true"></div>
+
+    <div class="toast" id="toast" role="status">
+      <span id="toastMsg"></span>
+      <button class="toast-action" id="toastAction" type="button" style="display:none;">Undo</button>
+    </div>
 
     <script>
       (function () {
@@ -382,8 +663,75 @@
           down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
           plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
           checkBig: '<svg viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.8 9.2 18.5 20.5 6"/></svg>',
-          eraser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>'
+          eraser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>',
+          download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+          printer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V2h12v7"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>',
+          fileText: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+          archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
+          restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+          calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>',
+          flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',
+          layout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>'
         };
+
+        /* ---------------- Templates (only added when a visitor picks one) ---------------- */
+        var TEMPLATES = [
+          {
+            name: "Grocery list",
+            blurb: "Everyday food shopping, grouped by store section.",
+            items: [
+              ["Milk", "", "Dairy and eggs"], ["Eggs", "", "Dairy and eggs"], ["Cheese", "", "Dairy and eggs"],
+              ["Apples", "", "Produce"], ["Bananas", "", "Produce"], ["Lettuce", "", "Produce"], ["Tomatoes", "", "Produce"],
+              ["Bread", "", "Bakery"], ["Rice", "", "Pantry"], ["Pasta", "", "Pantry"], ["Olive oil", "", "Pantry"],
+              ["Dish soap", "", "Household"], ["Paper towels", "", "Household"]
+            ]
+          },
+          {
+            name: "Trip packing list",
+            blurb: "Clothes, toiletries, and documents for a trip away.",
+            items: [
+              ["Shirts", "", "Clothing"], ["Pants or shorts", "", "Clothing"], ["Underwear and socks", "", "Clothing"], ["Sleepwear", "", "Clothing"], ["Jacket", "", "Clothing"],
+              ["Toothbrush and toothpaste", "", "Toiletries"], ["Shampoo", "", "Toiletries"], ["Deodorant", "", "Toiletries"], ["Sunscreen", "", "Toiletries"],
+              ["ID or passport", "", "Documents and tech"], ["Phone charger", "", "Documents and tech"], ["Tickets or booking confirmations", "", "Documents and tech"], ["Medications", "", "Documents and tech"]
+            ]
+          },
+          {
+            name: "Home cleaning list",
+            blurb: "A room-by-room clean for the whole home.",
+            items: [
+              ["Wipe counters and stove", "", "Kitchen"], ["Clean out the fridge", "", "Kitchen"], ["Mop the floor", "", "Kitchen"],
+              ["Scrub the shower or tub", "", "Bathroom"], ["Clean the toilet and sink", "", "Bathroom"], ["Wash towels", "", "Bathroom"],
+              ["Dust shelves and surfaces", "", "Living areas"], ["Vacuum floors and rugs", "", "Living areas"], ["Take out trash and recycling", "", "Living areas"]
+            ]
+          },
+          {
+            name: "Moving list",
+            blurb: "Before, during, and after a move.",
+            items: [
+              ["Book movers or a truck", "", "Before the move"], ["Collect boxes and tape", "", "Before the move"], ["Label boxes by room", "", "Before the move"], ["Update your address with mail and accounts", "", "Before the move"],
+              ["Walk through the old place one last time", "", "Moving day"], ["Keep keys, documents, and chargers with you", "", "Moving day"],
+              ["Unpack the kitchen and beds first", "", "After the move"], ["Check utilities and internet", "", "After the move"]
+            ]
+          },
+          {
+            name: "Party planning list",
+            blurb: "Food, supplies, and jobs for hosting people.",
+            items: [
+              ["Send invitations", "", "To do"], ["Plan the menu", "", "To do"], ["Tidy and set up seating", "", "To do"],
+              ["Main dish ingredients", "", "Food and drink"], ["Snacks", "", "Food and drink"], ["Drinks and ice", "", "Food and drink"], ["Dessert", "", "Food and drink"],
+              ["Plates, cups, and napkins", "", "Supplies"], ["Music or playlist", "", "Supplies"]
+            ]
+          },
+          {
+            name: "Weekly reset list",
+            blurb: "A short weekly reset for home and work.",
+            items: [
+              ["Review the calendar for the week", "", "Plan"], ["Pick the three most important tasks", "", "Plan"],
+              ["Do laundry", "", "Home"], ["Change bed sheets", "", "Home"], ["Quick tidy of every room", "", "Home"],
+              ["Back up important files", "", "Work"], ["Clear the inbox", "", "Work"]
+            ]
+          }
+        ];
 
         /* ---------------- State ---------------- */
         var uidCounter = 0;
@@ -409,6 +757,12 @@
         }
         function uid() { return makeId(takenIds()); }
 
+        var PRIORITIES = ["none", "high", "medium", "low"];
+        function cleanPriority(v) { return PRIORITIES.indexOf(v) !== -1 ? v : "none"; }
+        function cleanDue(v) {
+          return (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : "";
+        }
+
         function loadState() {
           try {
             var raw = localStorage.getItem(STORAGE_KEY);
@@ -424,6 +778,7 @@
                 id: listId,
                 name: l.name,
                 createdAt: typeof l.createdAt === "number" ? l.createdAt : 0,
+                archived: !!l.archived,
                 items: l.items.filter(function (it) { return it && typeof it.id === "string" && typeof it.text === "string"; }).map(function (it) {
                   var itemId = taken.has(it.id) ? makeId(taken) : (taken.add(it.id), it.id);
                   return {
@@ -431,13 +786,15 @@
                     text: it.text,
                     detail: typeof it.detail === "string" ? it.detail : "",
                     section: typeof it.section === "string" ? it.section : "",
+                    dueDate: cleanDue(it.dueDate),
+                    priority: cleanPriority(it.priority),
                     done: !!it.done
                   };
                 })
               };
             });
             var def = typeof parsed.defaultId === "string" ? parsed.defaultId : null;
-            if (def && !lists.some(function (l) { return l.id === def; })) def = null;
+            if (def && !lists.some(function (l) { return l.id === def && !l.archived; })) def = null;
             return { checklists: lists, defaultId: def };
           } catch (e) {
             return { checklists: [], defaultId: null };
@@ -452,6 +809,12 @@
         var activeId = null;
         var editingItemId = null;
         var dragItemId = null;
+        /* In-session UI state only (not saved): */
+        var searchQuery = "";
+        var statusFilter = "all"; /* all | open | done */
+        var sectionFilter = "all";
+        var undoStack = [];
+        var archivedOpen = true;
 
         function findList(id) {
           for (var i = 0; i < state.checklists.length; i++) {
@@ -459,20 +822,22 @@
           }
           return null;
         }
+        function activeLists() { return state.checklists.filter(function (l) { return !l.archived; }); }
+        function archivedLists() { return state.checklists.filter(function (l) { return l.archived; }); }
         function newestList() {
           var best = null;
-          state.checklists.forEach(function (l) { if (!best || l.createdAt >= best.createdAt) best = l; });
+          activeLists().forEach(function (l) { if (!best || l.createdAt >= best.createdAt) best = l; });
           return best;
         }
         function resolveOpenListId() {
-          if (state.defaultId && findList(state.defaultId)) return state.defaultId;
+          if (state.defaultId && findList(state.defaultId) && !findList(state.defaultId).archived) return state.defaultId;
           var n = newestList();
           return n ? n.id : null;
         }
         function activeList() { return activeId ? findList(activeId) : null; }
 
         activeId = resolveOpenListId();
-        saveState(); /* persist any id repairs made while loading */
+        saveState(); /* persist any repairs made while loading */
 
         /* ---------------- Helpers ---------------- */
         function esc(s) {
@@ -486,15 +851,112 @@
           return { total: list.items.length, done: done };
         }
         function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
-
-        var toastTimer = null;
-        function toast(msg) {
-          var el = document.getElementById("toast");
-          el.textContent = msg;
-          el.classList.add("show");
-          clearTimeout(toastTimer);
-          toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2400);
+        function todayStr() {
+          var d = new Date();
+          var mm = String(d.getMonth() + 1); if (mm.length < 2) mm = "0" + mm;
+          var dd = String(d.getDate()); if (dd.length < 2) dd = "0" + dd;
+          return d.getFullYear() + "-" + mm + "-" + dd;
         }
+        var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        function formatDue(due) {
+          var parts = due.split("-");
+          if (parts.length !== 3) return due;
+          var m = parseInt(parts[1], 10) - 1;
+          var day = parseInt(parts[2], 10);
+          var year = parseInt(parts[0], 10);
+          var out = MONTHS[m] + " " + day;
+          if (year !== new Date().getFullYear()) out += ", " + year;
+          return out;
+        }
+        function isOverdue(item) {
+          return !!item.dueDate && !item.done && item.dueDate < todayStr();
+        }
+        function sectionsOf(list) {
+          var sections = [];
+          list.items.forEach(function (it) {
+            var s = (it.section || "").trim();
+            if (s && sections.indexOf(s) === -1) sections.push(s);
+          });
+          return sections;
+        }
+        function itemMatchesFilters(item) {
+          if (statusFilter === "open" && item.done) return false;
+          if (statusFilter === "done" && !item.done) return false;
+          if (sectionFilter !== "all" && (item.section || "").trim() !== sectionFilter) return false;
+          return true;
+        }
+        function resetFilters() { statusFilter = "all"; sectionFilter = "all"; }
+
+        /* ---------------- Toast with optional Undo ---------------- */
+        var toastTimer = null;
+        var toastActionFn = null;
+        var toastEl = document.getElementById("toast");
+        var toastMsg = document.getElementById("toastMsg");
+        var toastAction = document.getElementById("toastAction");
+        var undoBtn = document.getElementById("undoBtn");
+        function refreshUndoBtn() { undoBtn.disabled = undoStack.length === 0; }
+        function toast(msg, withUndo) {
+          toastMsg.textContent = msg;
+          toastActionFn = withUndo ? doUndo : null;
+          toastAction.style.display = withUndo ? "" : "none";
+          toastEl.classList.toggle("has-action", !!withUndo);
+          toastEl.classList.add("show");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toastEl.classList.remove("show", "has-action");
+            toastActionFn = null;
+          }, withUndo ? 6000 : 2400);
+        }
+        toastAction.addEventListener("click", function () {
+          if (toastActionFn) { var fn = toastActionFn; toastActionFn = null; toastEl.classList.remove("show", "has-action"); fn(); }
+        });
+
+        /* ---------------- Undo ---------------- */
+        function pushUndo(entry) {
+          undoStack.push(entry);
+          if (undoStack.length > 20) undoStack.shift();
+          refreshUndoBtn();
+        }
+        function doUndo() {
+          var entry = undoStack.pop();
+          refreshUndoBtn();
+          if (!entry) { toast("Nothing to undo"); return; }
+          if (entry.type === "item") {
+            var list = findList(entry.listId);
+            if (list) {
+              var idx = Math.min(entry.index, list.items.length);
+              list.items.splice(idx, 0, entry.item);
+              activeId = list.id;
+              saveState(); renderAll();
+              toast("Item restored");
+            } else { toast("That list is gone, so the item could not be restored"); }
+          } else if (entry.type === "items") {
+            var l2 = findList(entry.listId);
+            if (l2) {
+              entry.items.slice().sort(function (a, b) { return a.index - b.index; }).forEach(function (pair) {
+                l2.items.splice(Math.min(pair.index, l2.items.length), 0, pair.item);
+              });
+              activeId = l2.id;
+              saveState(); renderAll();
+              toast(plural(entry.items.length, "item") + " restored");
+            } else { toast("That list is gone, so the items could not be restored"); }
+          } else if (entry.type === "list") {
+            var at = Math.min(entry.index, state.checklists.length);
+            state.checklists.splice(at, 0, entry.list);
+            if (entry.wasDefault) state.defaultId = entry.list.id;
+            activeId = entry.list.id;
+            saveState(); renderAll();
+            toast("Checklist restored");
+          }
+        }
+        undoBtn.addEventListener("click", doUndo);
+        document.addEventListener("keydown", function (e) {
+          if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
+            var tag = (e.target && e.target.tagName) || "";
+            if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+            if (undoStack.length) { e.preventDefault(); doUndo(); }
+          }
+        });
 
         /* ---------------- Modal ---------------- */
         var overlay = document.getElementById("modalOverlay");
@@ -523,6 +985,12 @@
           cancel.type = "button"; cancel.className = "btn btn-outline"; cancel.textContent = "Cancel";
           cancel.addEventListener("click", closeModal);
           modalActions.appendChild(cancel);
+          (opts.extraButtons || []).forEach(function (b) {
+            var btn = document.createElement("button");
+            btn.type = "button"; btn.className = "btn btn-outline"; btn.textContent = b.label;
+            btn.addEventListener("click", function () { closeModal(); b.onClick(); });
+            modalActions.appendChild(btn);
+          });
           var confirm = document.createElement("button");
           confirm.type = "button";
           confirm.className = "btn " + (opts.danger ? "btn-danger-solid" : "btn-primary");
@@ -546,16 +1014,371 @@
         modalInput.addEventListener("keydown", function (e) {
           if (e.key === "Enter" && modalConfirm) { e.preventDefault(); modalConfirm(); }
         });
-        document.addEventListener("keydown", function (e) {
-          if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
+
+        /* ---------------- Downloads ----------------
+           The file is generated first and held in lastDownload, then shown
+           in the "Your file is ready" modal with its real name and size.
+           That modal is the proof it generated, and its buttons give save
+           paths that work where a single silent anchor click does not:
+           inside an app webview and on iPhones, a blob download click can
+           be swallowed with no file saved and no message shown. The blob
+           URL is kept alive while the modal is open (the old code revoked
+           it after 800ms, which could cancel a slow phone download). */
+        var lastDownload = null;
+        var downloadOverlay = document.getElementById("downloadOverlay");
+        var downloadFileNameEl = document.getElementById("downloadFileName");
+        var downloadFileMetaEl = document.getElementById("downloadFileMeta");
+        var downloadPreviewEl = document.getElementById("downloadPreview");
+        var downloadShareBtn = document.getElementById("downloadShareBtn");
+        var downloadAgainBtn = document.getElementById("downloadAgainBtn");
+        var downloadOpenBtn = document.getElementById("downloadOpenBtn");
+        var downloadCopyBtn = document.getElementById("downloadCopyBtn");
+        var downloadCloseBtn = document.getElementById("downloadCloseBtn");
+        var downloadHelpEl = document.getElementById("downloadHelp");
+
+        function formatBytes(n) {
+          if (n < 1024) return n + " bytes";
+          return (Math.round((n / 1024) * 10) / 10) + " KB";
+        }
+        function triggerAnchorDownload(url, filename) {
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          a.rel = "noopener";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function () {
+            try { document.body.removeChild(a); } catch (e) { /* already gone */ }
+          }, 500);
+        }
+        function showDownloadModal() {
+          if (!lastDownload) return;
+          downloadFileNameEl.textContent = lastDownload.filename;
+          var detail = formatBytes(lastDownload.size) + " · Generated just now";
+          if (lastDownload.kindLabel) detail += " · " + lastDownload.kindLabel;
+          downloadFileMetaEl.textContent = detail;
+          downloadPreviewEl.textContent = lastDownload.preview || "(No preview available for this file. Open it or download it to see the full contents.)";
+          downloadPreviewEl.style.display = lastDownload.preview ? "" : "none";
+          var canShareFile = false;
+          try {
+            canShareFile = !!(lastDownload.file && navigator.canShare && navigator.canShare({ files: [lastDownload.file] }));
+          } catch (e) { canShareFile = false; }
+          downloadShareBtn.style.display = (canShareFile || !!navigator.share) ? "" : "none";
+          downloadShareBtn.textContent = canShareFile ? "Share / Save to Files" : "Share the file";
+          if (downloadHelpEl) {
+            downloadHelpEl.innerHTML = (canShareFile || !!navigator.share)
+              ? "<strong>Where to look:</strong> on iPhone, check the Files app under Downloads, or tap <strong>Share / Save to Files</strong> above and choose Save to Files. On Android and desktop Chrome, check the Downloads folder for the file name shown above."
+              : "<strong>Where to look:</strong> check the Downloads folder for the file name shown above. On iPhone, that is in the Files app under Downloads. If it is not there, tap <strong>Download again</strong> or <strong>Open the file</strong> and save it from there.";
+          }
+          downloadCopyBtn.style.display = lastDownload.contentText ? "" : "none";
+          downloadOverlay.classList.add("open");
+        }
+        function closeDownloadModal() {
+          downloadOverlay.classList.remove("open");
+          /* Keep the blob URL alive a while after closing, so a download
+             the browser is still handing to the phone is not cancelled. */
+          var dl = lastDownload;
+          if (dl && dl.url) {
+            setTimeout(function () {
+              if (lastDownload === dl) {
+                try { URL.revokeObjectURL(dl.url); } catch (e) { /* ignore */ }
+                lastDownload = null;
+              }
+            }, 60000);
+          }
+        }
+        function downloadFile(filename, content, mime, kindLabel) {
+          var blob = content instanceof Blob ? content : new Blob([content], { type: mime });
+          if (lastDownload && lastDownload.url) {
+            try { URL.revokeObjectURL(lastDownload.url); } catch (e) { /* ignore */ }
+          }
+          var url = URL.createObjectURL(blob);
+          var file = null;
+          try { file = new File([blob], filename, { type: mime }); } catch (e) { file = null; }
+          var contentText = typeof content === "string" && mime.indexOf("text/") === 0 ? content : null;
+          var preview = "";
+          if (contentText) {
+            preview = contentText.length > 700 ? contentText.slice(0, 700) + "\n…" : contentText;
+          } else if (typeof content === "string" && mime === "application/pdf") {
+            preview = "PDF document. Use Open the file, Download again, or Share / Save to Files to view and keep it.";
+          }
+          lastDownload = {
+            filename: filename, blob: blob, url: url, file: file, mime: mime,
+            size: blob.size, contentText: contentText, preview: preview, kindLabel: kindLabel || ""
+          };
+          /* Start the download synchronously, inside the tap that asked for
+             it, then show the confirmation modal with retry options. */
+          triggerAnchorDownload(url, filename);
+          showDownloadModal();
+        }
+        downloadAgainBtn.addEventListener("click", function () {
+          if (!lastDownload) return;
+          triggerAnchorDownload(lastDownload.url, lastDownload.filename);
+          toast("Downloading " + lastDownload.filename + " again");
         });
+        downloadOpenBtn.addEventListener("click", function () {
+          if (!lastDownload) return;
+          var win = null;
+          try { win = window.open(lastDownload.url, "_blank", "noopener"); } catch (e) { win = null; }
+          if (!win) {
+            toast("Your browser blocked opening the file. Use Download again or Share instead.");
+          }
+        });
+        downloadShareBtn.addEventListener("click", function () {
+          if (!lastDownload) return;
+          var dl = lastDownload;
+          var canShareFile = false;
+          try { canShareFile = !!(dl.file && navigator.canShare && navigator.canShare({ files: [dl.file] })); } catch (e) { canShareFile = false; }
+          if (canShareFile) {
+            navigator.share({ files: [dl.file], title: dl.filename }).then(function () {
+              toast("File shared");
+            }).catch(function (err) {
+              if (err && err.name === "AbortError") return;
+              toast("Sharing was not completed. Use Download again instead.");
+            });
+            return;
+          }
+          if (navigator.share && dl.contentText) {
+            navigator.share({ title: dl.filename, text: dl.contentText }).then(function () {
+              toast("Checklist text shared");
+            }).catch(function (err) {
+              if (err && err.name === "AbortError") return;
+              toast("Sharing was not completed. Use Download again instead.");
+            });
+            return;
+          }
+          toast("Sharing is not available in this browser. Use Download again instead.");
+        });
+        downloadCopyBtn.addEventListener("click", function () {
+          if (!lastDownload || !lastDownload.contentText) return;
+          var text = lastDownload.contentText;
+          function done() { toast("Checklist text copied. Paste it anywhere to keep it."); }
+          function fallbackCopy() {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.setAttribute("readonly", "");
+            ta.style.position = "fixed"; ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand("copy"); done(); }
+            catch (e) { toast("Copy did not work in this browser."); }
+            document.body.removeChild(ta);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(fallbackCopy);
+          } else { fallbackCopy(); }
+        });
+        downloadCloseBtn.addEventListener("click", closeDownloadModal);
+        downloadOverlay.addEventListener("click", function (e) { if (e.target === downloadOverlay) closeDownloadModal(); });
+        function safeFilename(name) {
+          var f = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          return f || "checklist";
+        }
+
+        function listToLines(list) {
+          var c = counts(list);
+          var lines = [list.name, c.done + " of " + c.total + " done", ""];
+          var prevSection = "\u0000unset";
+          list.items.forEach(function (item) {
+            var sec = (item.section || "").trim();
+            if (sec !== prevSection) {
+              if (sec) lines.push(sec.toUpperCase());
+              else if (prevSection !== "\u0000unset") lines.push("OTHER ITEMS");
+              prevSection = sec;
+            }
+            var line = (item.done ? "[x] " : "[ ] ") + item.text;
+            var notes = [];
+            if (item.detail) notes.push(item.detail);
+            if (item.dueDate) notes.push("Due " + formatDue(item.dueDate) + (isOverdue(item) ? " (overdue)" : ""));
+            if (item.priority && item.priority !== "none") notes.push(item.priority.charAt(0).toUpperCase() + item.priority.slice(1) + " priority");
+            if (notes.length) line += " — " + notes.join(" · ");
+            lines.push(line);
+          });
+          return lines;
+        }
+        function exportText(list) {
+          var text = listToLines(list).join("\n") + "\n";
+          downloadFile(safeFilename(list.name) + ".txt", text, "text/plain;charset=utf-8", "Text file · " + listToLines(list).length + " lines");
+        }
+
+        /* Small self-contained PDF writer (text lines, Helvetica). */
+        function pdfEscape(s) {
+          return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)")
+            .replace(/[^\x20-\x7E]/g, "?");
+        }
+        function wrapLine(line, max) {
+          if (line.length <= max) return [line];
+          var out = [], rest = line;
+          while (rest.length > max) {
+            var cut = rest.lastIndexOf(" ", max);
+            if (cut < 10) cut = max;
+            out.push(rest.slice(0, cut));
+            rest = "    " + rest.slice(cut).trim();
+          }
+          if (rest) out.push(rest);
+          return out;
+        }
+        function exportPdf(list) {
+          var raw = listToLines(list);
+          var lines = [];
+          raw.forEach(function (l) { wrapLine(l, 88).forEach(function (w) { lines.push(w); }); });
+          var perPage = 46, pages = [];
+          for (var i = 0; i < lines.length; i += perPage) pages.push(lines.slice(i, i + perPage));
+          if (!pages.length) pages = [["(empty)"]];
+          var objects = [];
+          objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+          var kids = pages.map(function (_, pi) { return (4 + pi * 2) + " 0 R"; }).join(" ");
+          objects[2] = "<< /Type /Pages /Kids [" + kids + "] /Count " + pages.length + " >>";
+          objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+          pages.forEach(function (pageLines, pi) {
+            var pageNum = 4 + pi * 2, contentNum = 5 + pi * 2;
+            objects[pageNum] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents " + contentNum + " 0 R >>";
+            var stream = "BT /F1 11 Tf 50 742 Td 15 TL ";
+            pageLines.forEach(function (l, li) {
+              if (li > 0) stream += "T* ";
+              stream += "(" + pdfEscape(l) + ") Tj ";
+            });
+            stream += "ET";
+            objects[contentNum] = "<< /Length " + stream.length + " >>\nstream\n" + stream + "\nendstream";
+          });
+          var pdf = "%PDF-1.4\n", offsets = [0];
+          for (var n = 1; n < objects.length; n++) {
+            offsets[n] = pdf.length;
+            pdf += n + " 0 obj\n" + objects[n] + "\nendobj\n";
+          }
+          var xrefPos = pdf.length;
+          pdf += "xref\n0 " + objects.length + "\n0000000000 65535 f \n";
+          for (var m = 1; m < objects.length; m++) {
+            var off = String(offsets[m]);
+            while (off.length < 10) off = "0" + off;
+            pdf += off + " 00000 n \n";
+          }
+          pdf += "trailer\n<< /Size " + objects.length + " /Root 1 0 R >>\nstartxref\n" + xrefPos + "\n%%EOF";
+          downloadFile(safeFilename(list.name) + ".pdf", pdf, "application/pdf", "PDF · " + plural(pages.length, "page"));
+        }
+
+        /* ---------------- Print ---------------- */
+        var printOverlay = document.getElementById("printOverlay");
+        var printPreview = document.getElementById("printPreview");
+        var printSheet = document.getElementById("printSheet");
+        var printList = null;
+        function printSheetHtml(list) {
+          var c = counts(list);
+          var html = "<h2>" + esc(list.name) + "</h2>" +
+            '<div class="ps-meta">' + c.done + " of " + c.total + " done · Printed " +
+            MONTHS[new Date().getMonth()] + " " + new Date().getDate() + ", " + new Date().getFullYear() + "</div>";
+          var prevSection = "\u0000unset";
+          list.items.forEach(function (item) {
+            var sec = (item.section || "").trim();
+            if (sec !== prevSection) {
+              if (prevSection !== "\u0000unset") html += "</ul>";
+              if (sec) html += "<h4>" + esc(sec) + "</h4>";
+              html += "<ul>";
+              prevSection = sec;
+            }
+            var notes = [];
+            if (item.detail) notes.push(esc(item.detail));
+            if (item.dueDate) notes.push("Due " + formatDue(item.dueDate) + (isOverdue(item) ? " (overdue)" : ""));
+            if (item.priority && item.priority !== "none") notes.push(item.priority.charAt(0).toUpperCase() + item.priority.slice(1) + " priority");
+            html += "<li>" +
+              '<span class="ps-box">' + (item.done ? ICONS.checkBig : "") + "</span>" +
+              "<span>" + '<span class="' + (item.done ? "ps-done" : "") + '">' + esc(item.text) + "</span>" +
+              (notes.length ? '<br /><span class="ps-note">' + notes.join(" · ") + "</span>" : "") +
+              "</span></li>";
+          });
+          if (list.items.length) html += "</ul>";
+          else html += "<p>No items in this list yet.</p>";
+          return html;
+        }
+        function openPrintPreview(list) {
+          printList = list;
+          var html = printSheetHtml(list);
+          printPreview.innerHTML = html;
+          printSheet.innerHTML = html;
+          document.getElementById("printTitle").textContent = "Clean copy: " + list.name;
+          /* While the preview is open, the page's print styles output only this
+             clean sheet, so the browser's own Print command prints the list alone. */
+          document.body.classList.add("printing-sheet");
+          printOverlay.classList.add("open");
+        }
+        function closePrintPreview() {
+          printOverlay.classList.remove("open");
+          document.body.classList.remove("printing-sheet");
+        }
+        document.getElementById("printClose").addEventListener("click", closePrintPreview);
+        document.getElementById("printPdfBtn").addEventListener("click", function () {
+          if (printList) { var l = printList; closePrintPreview(); exportPdf(l); }
+        });
+        printOverlay.addEventListener("click", function (e) { if (e.target === printOverlay) closePrintPreview(); });
+
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") {
+            if (overlay.classList.contains("open")) closeModal();
+            if (downloadOverlay.classList.contains("open")) closeDownloadModal();
+            closePrintPreview();
+            templateOverlay.classList.remove("open");
+          }
+        });
+
+        /* ---------------- Template picker ---------------- */
+        var templateOverlay = document.getElementById("templateOverlay");
+        var templateGrid = document.getElementById("templateGrid");
+        function renderTemplateGrid() {
+          templateGrid.innerHTML = "";
+          TEMPLATES.forEach(function (tpl) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "template-card";
+            btn.innerHTML =
+              '<span class="tpl-name">' + ICONS.layout + esc(tpl.name) + "</span>" +
+              '<span class="tpl-meta" style="display:block;">' + esc(tpl.blurb) + "<br />" + plural(tpl.items.length, "item") + "</span>";
+            btn.addEventListener("click", function () {
+              templateOverlay.classList.remove("open");
+              createFromTemplate(tpl);
+            });
+            templateGrid.appendChild(btn);
+          });
+        }
+        function openTemplatePicker() {
+          renderTemplateGrid();
+          templateOverlay.classList.add("open");
+        }
+        document.getElementById("templateCancel").addEventListener("click", function () {
+          templateOverlay.classList.remove("open");
+        });
+        document.getElementById("templateBlank").addEventListener("click", function () {
+          templateOverlay.classList.remove("open");
+          promptNewChecklist();
+        });
+        templateOverlay.addEventListener("click", function (e) {
+          if (e.target === templateOverlay) templateOverlay.classList.remove("open");
+        });
+        function createFromTemplate(tpl) {
+          var list = { id: uid(), name: tpl.name, createdAt: Date.now(), archived: false, items: [] };
+          state.checklists.push(list);
+          tpl.items.forEach(function (row) {
+            list.items.push({
+              id: uid(), text: row[0], detail: row[1] || "", section: row[2] || "",
+              dueDate: "", priority: "none", done: false
+            });
+          });
+          activeId = list.id;
+          editingItemId = null;
+          resetFilters();
+          saveState(); renderAll();
+          toast("Template added. Make it your own");
+          var input = document.getElementById("newItemText");
+          if (input) input.focus();
+        }
 
         /* ---------------- Checklist actions ---------------- */
         function createChecklist(name) {
-          var list = { id: uid(), name: name, createdAt: Date.now(), items: [] };
+          var list = { id: uid(), name: name, createdAt: Date.now(), archived: false, items: [] };
           state.checklists.push(list);
           activeId = list.id;
           editingItemId = null;
+          resetFilters();
           saveState(); renderAll();
           toast("Checklist created");
           var input = document.getElementById("newItemText");
@@ -590,15 +1413,33 @@
             }
           });
         }
+        function archiveList(list) {
+          list.archived = true;
+          if (state.defaultId === list.id) state.defaultId = null;
+          if (activeId === list.id) { editingItemId = null; activeId = resolveOpenListId(); }
+          saveState(); renderAll();
+          toast("\u201C" + list.name + "\u201D archived");
+        }
+        function restoreList(list) {
+          list.archived = false;
+          activeId = list.id;
+          editingItemId = null;
+          resetFilters();
+          saveState(); renderAll();
+          toast("\u201C" + list.name + "\u201D restored");
+        }
         function confirmDeleteChecklist(list) {
           var c = counts(list);
           openModal({
             title: "Delete this checklist?",
-            text: "\u201C" + list.name + "\u201D and its " + plural(c.total, "item") + " will be deleted. This cannot be undone.",
+            text: "\u201C" + list.name + "\u201D and its " + plural(c.total, "item") + " will be deleted. You can undo this from the notice that appears right after, or archive the list instead to keep it.",
             confirmLabel: "Delete checklist",
             danger: true,
+            extraButtons: [{ label: "Archive instead", onClick: function () { archiveList(list); } }],
             onConfirm: function () {
+              var idx = state.checklists.indexOf(list);
               var wasDefault = state.defaultId === list.id;
+              pushUndo({ type: "list", list: list, index: idx, wasDefault: wasDefault });
               state.checklists = state.checklists.filter(function (l) { return l.id !== list.id; });
               if (wasDefault) state.defaultId = null;
               if (activeId === list.id) {
@@ -606,7 +1447,7 @@
                 activeId = resolveOpenListId();
               }
               saveState(); renderAll();
-              toast("Checklist deleted");
+              toast("Checklist deleted", true);
             }
           });
         }
@@ -617,8 +1458,11 @@
         }
 
         /* ---------------- Item actions ---------------- */
-        function addItem(list, text, detail, section) {
-          list.items.push({ id: uid(), text: text, detail: detail, section: section, done: false });
+        function addItem(list, data) {
+          list.items.push({
+            id: uid(), text: data.text, detail: data.detail, section: data.section,
+            dueDate: data.dueDate, priority: data.priority, done: false
+          });
           saveState(); renderAll();
           var input = document.getElementById("newItemText");
           if (input) input.focus();
@@ -628,10 +1472,12 @@
           saveState(); renderAll();
         }
         function deleteItem(list, item) {
+          var idx = list.items.indexOf(item);
+          pushUndo({ type: "item", listId: list.id, item: item, index: idx });
           list.items = list.items.filter(function (it) { return it.id !== item.id; });
           if (editingItemId === item.id) editingItemId = null;
           saveState(); renderAll();
-          toast("Item deleted");
+          toast("Item deleted", true);
         }
         function moveItem(list, item, dir) {
           var idx = list.items.indexOf(item);
@@ -643,51 +1489,59 @@
           saveState(); renderAll();
         }
         function clearChecked(list) {
+          var removed = [];
+          list.items.forEach(function (it, i) { if (it.done) removed.push({ item: it, index: i }); });
+          if (!removed.length) return;
+          pushUndo({ type: "items", listId: list.id, items: removed });
           list.items = list.items.filter(function (it) { return !it.done; });
           editingItemId = null;
           saveState(); renderAll();
-          toast("Checked items cleared");
+          toast("Checked items cleared", true);
         }
 
         /* ---------------- Rendering: sidebar ---------------- */
         var navRegion = document.getElementById("navRegion");
+        var archivedRegion = document.getElementById("archivedRegion");
         var detailRegion = document.getElementById("detailRegion");
         var summaryLine = document.getElementById("summaryLine");
         var sidebarCount = document.getElementById("sidebarCount");
 
-        function renderSidebar() {
-          sidebarCount.textContent = state.checklists.length ? plural(state.checklists.length, "list") : "";
-          var totalItems = 0, totalDone = 0;
-          state.checklists.forEach(function (l) { var c = counts(l); totalItems += c.total; totalDone += c.done; });
-          summaryLine.innerHTML = state.checklists.length
-            ? "<strong>" + plural(state.checklists.length, "checklist") + "</strong> &middot; " + totalDone + " of " + plural(totalItems, "item") + " checked off"
-            : "No checklists yet";
-
-          if (!state.checklists.length) {
-            navRegion.innerHTML = '<div class="nav-empty">Nothing here yet.<br />Create your first checklist to get started.</div>';
-            return;
-          }
-          var sorted = state.checklists.map(function (l, i) { return [l, i]; })
+        function sortedCopy(lists) {
+          return lists.map(function (l, i) { return [l, i]; })
             .sort(function (a, b) { return (b[0].createdAt - a[0].createdAt) || (b[1] - a[1]); })
             .map(function (pair) { return pair[0]; });
-          var ul = document.createElement("ul");
-          ul.className = "nav-list";
-          sorted.forEach(function (list) {
-            var c = counts(list);
-            var li = document.createElement("li");
-            var row = document.createElement("div");
-            row.className = "nav-item" + (list.id === activeId ? " active" : "");
-            row.setAttribute("role", "button");
-            row.setAttribute("tabindex", "0");
-            row.setAttribute("aria-label", "Open checklist " + list.name);
-            var pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
-            var main = document.createElement("div");
-            main.className = "nav-main";
-            main.innerHTML =
-              '<div class="nav-name">' + esc(list.name) + "</div>" +
-              '<div class="nav-meta">' + (c.total ? c.done + " of " + c.total + " done" : "No items yet") + "</div>" +
-              (c.total ? '<div class="mini-progress"><div style="width:' + pct + '%"></div></div>' : "") +
-              (state.defaultId === list.id ? '<span class="default-tag">Opens first</span>' : "");
+        }
+        function navRow(list, isArchived) {
+          var c = counts(list);
+          var overdueCount = 0;
+          list.items.forEach(function (it) { if (isOverdue(it)) overdueCount++; });
+          var li = document.createElement("li");
+          var row = document.createElement("div");
+          row.className = "nav-item" + (list.id === activeId ? " active" : "") + (isArchived ? " archived-item" : "");
+          row.setAttribute("role", "button");
+          row.setAttribute("tabindex", "0");
+          row.setAttribute("aria-label", "Open checklist " + list.name);
+          var pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
+          var main = document.createElement("div");
+          main.className = "nav-main";
+          var meta = c.total ? c.done + " of " + c.total + " done" : "No items yet";
+          if (overdueCount) meta += " · " + overdueCount + " overdue";
+          main.innerHTML =
+            '<div class="nav-name">' + esc(list.name) + "</div>" +
+            '<div class="nav-meta">' + meta + "</div>" +
+            (c.total && !isArchived ? '<div class="mini-progress"><div style="width:' + pct + '%"></div></div>' : "") +
+            (!isArchived && state.defaultId === list.id ? '<span class="default-tag">Opens first</span>' : "") +
+            (isArchived ? '<span class="archived-tag">Archived</span>' : "");
+          row.appendChild(main);
+          if (isArchived) {
+            var restore = document.createElement("button");
+            restore.type = "button";
+            restore.className = "btn btn-ghost btn-sm nav-restore";
+            restore.textContent = "Restore";
+            restore.setAttribute("aria-label", "Restore " + list.name);
+            restore.addEventListener("click", function (e) { e.stopPropagation(); restoreList(list); });
+            row.appendChild(restore);
+          } else {
             var star = document.createElement("button");
             star.type = "button";
             star.className = "nav-star" + (state.defaultId === list.id ? " is-default" : "");
@@ -698,23 +1552,130 @@
               e.stopPropagation();
               if (state.defaultId !== list.id) setDefault(list);
             });
-            row.appendChild(main);
             row.appendChild(star);
-            row.addEventListener("click", function () {
-              activeId = list.id; editingItemId = null; renderAll();
-            });
-            row.addEventListener("keydown", function (e) {
-              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activeId = list.id; editingItemId = null; renderAll(); }
-            });
-            li.appendChild(row);
-            ul.appendChild(li);
+          }
+          row.addEventListener("click", function () { openList(list.id); });
+          row.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openList(list.id); }
           });
-          navRegion.innerHTML = "";
-          navRegion.appendChild(ul);
+          li.appendChild(row);
+          return li;
+        }
+        function openList(id) {
+          activeId = id;
+          editingItemId = null;
+          resetFilters();
+          clearSearch();
+          renderAll();
+        }
+        function renderSidebar() {
+          var act = activeLists();
+          var arc = archivedLists();
+          sidebarCount.textContent = act.length ? plural(act.length, "list") : "";
+          var totalItems = 0, totalDone = 0, totalOverdue = 0;
+          act.forEach(function (l) {
+            var c = counts(l); totalItems += c.total; totalDone += c.done;
+            l.items.forEach(function (it) { if (isOverdue(it)) totalOverdue++; });
+          });
+          summaryLine.innerHTML = state.checklists.length
+            ? "<strong>" + plural(act.length, "checklist") + "</strong> &middot; " + totalDone + " of " + plural(totalItems, "item") + " checked off" +
+              (totalOverdue ? " &middot; <strong style=\"color:var(--danger);\">" + plural(totalOverdue, "overdue item") + "</strong>" : "") +
+              (arc.length ? " &middot; " + arc.length + " archived" : "")
+            : "No checklists yet";
+
+          if (!act.length) {
+            navRegion.innerHTML = arc.length
+              ? '<div class="nav-empty">No active checklists.<br />Your archived lists are below.</div>'
+              : '<div class="nav-empty">Nothing here yet.<br />Create your first checklist to get started.</div>';
+          } else {
+            var ul = document.createElement("ul");
+            ul.className = "nav-list";
+            sortedCopy(act).forEach(function (list) { ul.appendChild(navRow(list, false)); });
+            navRegion.innerHTML = "";
+            navRegion.appendChild(ul);
+          }
+
+          archivedRegion.innerHTML = "";
+          if (arc.length) {
+            var head = document.createElement("button");
+            head.type = "button";
+            head.className = "archived-head";
+            head.innerHTML = ICONS.archive + " Archived · " + arc.length + (archivedOpen ? " ▾" : " ▸");
+            head.setAttribute("aria-expanded", archivedOpen ? "true" : "false");
+            head.addEventListener("click", function () { archivedOpen = !archivedOpen; renderSidebar(); });
+            archivedRegion.appendChild(head);
+            if (archivedOpen) {
+              var ul2 = document.createElement("ul");
+              ul2.className = "nav-list";
+              sortedCopy(arc).forEach(function (list) { ul2.appendChild(navRow(list, true)); });
+              archivedRegion.appendChild(ul2);
+            }
+          }
+        }
+
+        /* ---------------- Rendering: search results ---------------- */
+        function renderSearchResults() {
+          var q = searchQuery.toLowerCase();
+          var groups = [];
+          var total = 0;
+          state.checklists.forEach(function (list) {
+            var matches = list.items.filter(function (it) {
+              return it.text.toLowerCase().indexOf(q) !== -1 ||
+                (it.detail || "").toLowerCase().indexOf(q) !== -1 ||
+                (it.section || "").toLowerCase().indexOf(q) !== -1;
+            });
+            if (matches.length) { groups.push({ list: list, matches: matches }); total += matches.length; }
+          });
+          var html = '<div class="detail-head"><div class="detail-title-wrap">' +
+            '<h1 class="detail-title">Search results</h1>' +
+            '<div class="detail-sub"><span style="font-size:13px; color:var(--muted); font-weight:600;">' +
+            (total ? plural(total, "match") + " for \u201C" + esc(searchQuery) + "\u201D across " + plural(groups.length, "list") : "No matches for \u201C" + esc(searchQuery) + "\u201D") +
+            "</span></div></div>" +
+            '<div class="detail-actions"><button class="btn btn-outline btn-sm" id="exitSearchBtn" type="button">Back to my list</button></div></div>';
+          if (!total) {
+            html += '<div class="items-empty"><p>Nothing in any list matches that search.<br />Try a shorter word, or clear the search to go back to your lists.</p></div>';
+          }
+          groups.forEach(function (g) {
+            html += '<div class="search-result-group"><h3>' + esc(g.list.name) + (g.list.archived ? ' <span class="archived-tag">Archived</span>' : "") + "</h3>";
+            g.matches.forEach(function (item) {
+              html += '<button class="search-result" type="button" data-open-list="' + g.list.id + '">' +
+                '<span class="sr-box">' + (item.done ? ICONS.checkBig : "") + "</span>" +
+                "<span>" + esc(item.text) + (isOverdue(item) ? ' <span class="meta-badge due-overdue">Overdue</span>' : "") + "</span>" +
+                '<span class="sr-state">' + (item.done ? "Done" : "Open") + "</span></button>";
+            });
+            html += "</div>";
+          });
+          detailRegion.innerHTML = html;
+          var exitBtn = document.getElementById("exitSearchBtn");
+          if (exitBtn) exitBtn.addEventListener("click", function () { clearSearch(); renderAll(); });
+          detailRegion.querySelectorAll("[data-open-list]").forEach(function (btn) {
+            btn.addEventListener("click", function () { openList(btn.getAttribute("data-open-list")); });
+          });
         }
 
         /* ---------------- Rendering: detail ---------------- */
+        function priorityOptions(selected) {
+          var labels = { none: "No priority", high: "High priority", medium: "Medium priority", low: "Low priority" };
+          return PRIORITIES.map(function (p) {
+            return '<option value="' + p + '"' + (p === selected ? " selected" : "") + ">" + labels[p] + "</option>";
+          }).join("");
+        }
+        function itemMetaHtml(item) {
+          var badges = "";
+          if (item.dueDate) {
+            if (isOverdue(item)) badges += '<span class="meta-badge due-overdue">' + ICONS.calendar + " Overdue · Due " + formatDue(item.dueDate) + "</span>";
+            else if (item.dueDate === todayStr() && !item.done) badges += '<span class="meta-badge due-today">' + ICONS.calendar + " Due today" + "</span>";
+            else badges += '<span class="meta-badge">' + ICONS.calendar + " Due " + formatDue(item.dueDate) + "</span>";
+          }
+          if (item.priority && item.priority !== "none") {
+            badges += '<span class="meta-badge pri-' + item.priority + '">' + ICONS.flag + " " +
+              item.priority.charAt(0).toUpperCase() + item.priority.slice(1) + "</span>";
+          }
+          return badges ? '<div class="item-meta">' + badges + "</div>" : "";
+        }
+
         function renderDetail() {
+          if (searchQuery) { renderSearchResults(); return; }
           var list = activeList();
           if (!list) {
             detailRegion.innerHTML =
@@ -730,32 +1691,48 @@
                   "</svg>" +
                 "</span>" +
                 "<h2>Start your first checklist</h2>" +
-                "<p>Create a list for groceries, packing, a project, or anything else you want to track, then add items and check them off as you go.</p>" +
-                '<button class="btn btn-primary" id="emptyNewBtn" type="button">' + ICONS.plus + " Create a checklist</button>" +
+                "<p>Create a list for groceries, packing, a project, or anything else you want to track, then add items and check them off as you go. Lists are saved in this browser only.</p>" +
+                '<div class="empty-actions">' +
+                  '<button class="btn btn-primary" id="emptyNewBtn" type="button">' + ICONS.plus + " Create a checklist</button>" +
+                  '<button class="btn btn-outline" id="emptyTplBtn" type="button">' + ICONS.layout + " Start from a template</button>" +
+                "</div>" +
               "</div>";
             document.getElementById("emptyNewBtn").addEventListener("click", promptNewChecklist);
+            document.getElementById("emptyTplBtn").addEventListener("click", openTemplatePicker);
             return;
           }
 
           var c = counts(list);
           var pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
           var isDefault = state.defaultId === list.id;
-          var sections = [];
-          list.items.forEach(function (it) {
-            var s = (it.section || "").trim();
-            if (s && sections.indexOf(s) === -1) sections.push(s);
-          });
+          var sections = sectionsOf(list);
+          if (sectionFilter !== "all" && sections.indexOf(sectionFilter) === -1) sectionFilter = "all";
+          var visibleItems = list.items.filter(itemMatchesFilters);
+          var filtersActive = statusFilter !== "all" || sectionFilter !== "all";
 
           var html = "";
           html += '<div class="detail-head"><div class="detail-title-wrap">';
           html += '<h1 class="detail-title">' + esc(list.name) + "</h1>";
           html += '<div class="detail-sub">';
-          if (isDefault) html += '<span class="badge-default">' + ICONS.star + " Opens first</span>";
+          if (isDefault && !list.archived) html += '<span class="badge-default">' + ICONS.star + " Opens first</span>";
+          if (list.archived) html += '<span class="badge-archived">' + ICONS.archive + " Archived</span>";
           html += '<span style="font-size:13px; color:var(--muted); font-weight:600;">' + plural(c.total, "item") + "</span>";
           html += "</div></div>";
           html += '<div class="detail-actions">';
-          if (!isDefault) html += '<button class="btn btn-outline btn-sm" id="setDefaultBtn" type="button">' + ICONS.star + " Set as default</button>";
-          html += '<button class="btn btn-outline btn-sm" id="renameBtn" type="button">' + ICONS.pencil + " Rename</button>";
+          html += '<span class="export-wrap">' +
+            '<button class="btn btn-outline btn-sm" id="exportBtn" type="button" aria-haspopup="true">' + ICONS.download + " Export</button>" +
+            '<span class="export-menu" id="exportMenu" role="menu">' +
+              '<button type="button" id="exportTextBtn">' + ICONS.fileText + " Download as text</button>" +
+              '<button type="button" id="exportPdfBtn">' + ICONS.fileText + " Download as PDF</button>" +
+              '<button type="button" id="exportPrintBtn">' + ICONS.printer + " Preview clean copy</button>" +
+            "</span></span>";
+          if (list.archived) {
+            html += '<button class="btn btn-primary btn-sm" id="restoreBtn" type="button">' + ICONS.restore + " Restore list</button>";
+          } else {
+            if (!isDefault) html += '<button class="btn btn-outline btn-sm" id="setDefaultBtn" type="button">' + ICONS.star + " Set as default</button>";
+            html += '<button class="btn btn-outline btn-sm" id="renameBtn" type="button">' + ICONS.pencil + " Rename</button>";
+            html += '<button class="btn btn-outline btn-sm" id="archiveBtn" type="button">' + ICONS.archive + " Archive</button>";
+          }
           html += '<button class="btn btn-danger btn-sm" id="deleteListBtn" type="button">' + ICONS.trash + " Delete list</button>";
           html += "</div></div>";
 
@@ -764,30 +1741,58 @@
               '<div class="progress-label">' + c.done + " of " + c.total + " done</div></div>";
           }
 
-          /* Add item form */
-          html += '<form class="add-card" id="addForm"><h3>Add an item</h3><div class="add-grid">';
-          html += '<div class="field"><label for="newItemText">Item</label>' +
-            '<input class="input" id="newItemText" type="text" placeholder="What needs doing?" autocomplete="off" /></div>';
-          html += '<div class="add-row-2">';
-          html += '<div class="field"><label for="newItemDetail">Detail <span class="opt">(optional)</span></label>' +
-            '<input class="input" id="newItemDetail" type="text" placeholder="A note, a quantity, a link\u2026" autocomplete="off" /></div>';
-          html += '<div class="field"><label for="newItemSection">Section <span class="opt">(optional)</span></label>' +
-            '<input class="input" id="newItemSection" type="text" placeholder="For example: Produce" autocomplete="off" list="sectionList" />' +
-            '<datalist id="sectionList">' + sections.map(function (s) { return "<option value=\"" + esc(s) + "\"></option>"; }).join("") + "</datalist></div>";
-          html += "</div></div>";
-          html += '<button class="btn btn-primary" type="submit">' + ICONS.plus + " Add item</button></form>";
+          if (!list.archived) {
+            /* Filters */
+            if (c.total) {
+              html += '<div class="filter-row"><span class="filter-label">Show</span>' +
+                '<button class="chip' + (statusFilter === "all" ? " active" : "") + '" type="button" data-status="all">All</button>' +
+                '<button class="chip' + (statusFilter === "open" ? " active" : "") + '" type="button" data-status="open">Open</button>' +
+                '<button class="chip' + (statusFilter === "done" ? " active" : "") + '" type="button" data-status="done">Done</button>';
+              if (sections.length) {
+                html += '<select class="filter-select" id="sectionFilterSel" aria-label="Filter by section">' +
+                  '<option value="all"' + (sectionFilter === "all" ? " selected" : "") + ">All sections</option>" +
+                  sections.map(function (s) {
+                    return '<option value="' + esc(s) + '"' + (sectionFilter === s ? " selected" : "") + ">" + esc(s) + "</option>";
+                  }).join("") + "</select>";
+              }
+              html += '<span class="filter-count">Showing ' + visibleItems.length + " of " + c.total + "</span></div>";
+            }
+
+            /* Add item form */
+            html += '<form class="add-card" id="addForm"><h3>Add an item</h3><div class="add-grid">';
+            html += '<div class="field"><label for="newItemText">Item</label>' +
+              '<input class="input" id="newItemText" type="text" placeholder="What needs doing?" autocomplete="off" /></div>';
+            html += '<div class="add-row-2">';
+            html += '<div class="field"><label for="newItemDetail">Detail <span class="opt">(optional)</span></label>' +
+              '<input class="input" id="newItemDetail" type="text" placeholder="A note, a quantity, a link\u2026" autocomplete="off" /></div>';
+            html += '<div class="field"><label for="newItemSection">Section <span class="opt">(optional)</span></label>' +
+              '<input class="input" id="newItemSection" type="text" placeholder="For example: Produce" autocomplete="off" list="sectionList" />' +
+              '<datalist id="sectionList">' + sections.map(function (s) { return "<option value=\"" + esc(s) + "\"></option>"; }).join("") + "</datalist></div>";
+            html += "</div>";
+            html += '<div class="add-row-2">';
+            html += '<div class="field"><label for="newItemDue">Due date <span class="opt">(optional)</span></label>' +
+              '<input class="input" id="newItemDue" type="date" /></div>';
+            html += '<div class="field"><label for="newItemPriority">Priority <span class="opt">(optional)</span></label>' +
+              '<select class="input" id="newItemPriority">' + priorityOptions("none") + "</select></div>";
+            html += "</div></div>";
+            html += '<button class="btn btn-primary" type="submit">' + ICONS.plus + " Add item</button></form>";
+          } else {
+            html += '<div class="items-empty" style="padding:18px 16px 4px;"><p>This list is archived. Restore it to add or change items, or export a copy below from the Export button.</p></div>';
+          }
 
           /* Items */
           html += '<div class="items-head"><h3>Items</h3>';
-          if (c.done) html += '<button class="btn btn-ghost btn-sm" id="clearCheckedBtn" type="button">' + ICONS.eraser + " Clear checked</button>";
+          if (!list.archived && c.done) html += '<button class="btn btn-ghost btn-sm" id="clearCheckedBtn" type="button">' + ICONS.eraser + " Clear checked</button>";
           html += "</div>";
 
           if (!list.items.length) {
             html += '<div class="items-empty"><p>No items in this list yet.<br />Add your first item using the form above.</p></div>';
+          } else if (!visibleItems.length) {
+            html += '<div class="items-empty"><p>No items match the current filters.<br /><button class="btn btn-outline btn-sm" id="resetFiltersBtn" type="button" style="margin-top:10px;">Show everything</button></p></div>';
           } else {
             var body = "";
             var prevSection = "\u0000unset";
-            list.items.forEach(function (item, idx) {
+            visibleItems.forEach(function (item, vi) {
               var sec = (item.section || "").trim();
               if (sec !== prevSection) {
                 if (sec) body += '<div class="section-head">' + esc(sec) + "</div>";
@@ -795,8 +1800,8 @@
                 body += '<ul class="items-list">';
                 prevSection = sec;
               }
-              body += itemHtml(list, item, idx);
-              var next = list.items[idx + 1];
+              body += itemHtml(list, item, list.items.indexOf(item));
+              var next = visibleItems[vi + 1];
               var nextSec = next ? (next.section || "").trim() : null;
               if (!next || nextSec !== sec) body += "</ul>";
             });
@@ -806,21 +1811,100 @@
           detailRegion.innerHTML = html;
 
           /* Wire header actions */
+          var menu = document.getElementById("exportMenu");
+          var exportBtn = document.getElementById("exportBtn");
+          function closeExportMenu() {
+            if (!menu) return;
+            menu.classList.remove("open");
+            menu.style.transform = "";
+            menu.style.width = "";
+            if (exportBtn) exportBtn.setAttribute("aria-expanded", "false");
+          }
+          function positionExportMenu() {
+            if (!menu || !menu.classList.contains("open")) return;
+            /* Reset any previous shift, then measure the real box and clamp
+               it inside the viewport with 12px padding on both sides. This
+               runs on every screen size, so the menu can never spill off
+               the left or right edge even if its anchor button moves. */
+            menu.style.transform = "";
+            var pad = 12;
+            var vw = window.innerWidth || document.documentElement.clientWidth || 0;
+            if (!vw) return;
+            var rect = menu.getBoundingClientRect();
+            if (rect.width > vw - pad * 2) {
+              menu.style.width = (vw - pad * 2) + "px";
+              rect = menu.getBoundingClientRect();
+            }
+            var shift = 0;
+            if (rect.left < pad) shift = pad - rect.left;
+            else if (rect.right > vw - pad) shift = (vw - pad) - rect.right;
+            if (shift !== 0) menu.style.transform = "translateX(" + shift + "px)";
+          }
+          if (exportBtn && menu) {
+            exportBtn.setAttribute("aria-expanded", "false");
+            exportBtn.addEventListener("click", function (e) {
+              e.stopPropagation();
+              var willOpen = !menu.classList.contains("open");
+              menu.classList.toggle("open", willOpen);
+              exportBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+              if (willOpen) positionExportMenu();
+              else { menu.style.transform = ""; menu.style.width = ""; }
+            });
+            menu.addEventListener("click", function (e) { e.stopPropagation(); });
+            document.addEventListener("click", function () {
+              if (menu && menu.isConnected) closeExportMenu();
+            });
+            document.addEventListener("keydown", function (e) {
+              if (e.key === "Escape" && menu && menu.isConnected) closeExportMenu();
+            });
+            window.addEventListener("resize", function () {
+              if (menu && menu.isConnected) closeExportMenu();
+            });
+          }
+          document.getElementById("exportTextBtn").addEventListener("click", function () { closeExportMenu(); exportText(list); });
+          document.getElementById("exportPdfBtn").addEventListener("click", function () { closeExportMenu(); exportPdf(list); });
+          document.getElementById("exportPrintBtn").addEventListener("click", function () { closeExportMenu(); openPrintPreview(list); });
+
           var setDefBtn = document.getElementById("setDefaultBtn");
           if (setDefBtn) setDefBtn.addEventListener("click", function () { setDefault(list); });
-          document.getElementById("renameBtn").addEventListener("click", function () { promptRenameChecklist(list); });
+          var renameBtn = document.getElementById("renameBtn");
+          if (renameBtn) renameBtn.addEventListener("click", function () { promptRenameChecklist(list); });
+          var archiveBtn = document.getElementById("archiveBtn");
+          if (archiveBtn) archiveBtn.addEventListener("click", function () { archiveList(list); });
+          var restoreBtn = document.getElementById("restoreBtn");
+          if (restoreBtn) restoreBtn.addEventListener("click", function () { restoreList(list); });
           document.getElementById("deleteListBtn").addEventListener("click", function () { confirmDeleteChecklist(list); });
           var clearBtn = document.getElementById("clearCheckedBtn");
           if (clearBtn) clearBtn.addEventListener("click", function () { clearChecked(list); });
+          var resetBtn = document.getElementById("resetFiltersBtn");
+          if (resetBtn) resetBtn.addEventListener("click", function () { resetFilters(); renderAll(); });
+
+          /* Wire filters */
+          detailRegion.querySelectorAll("[data-status]").forEach(function (chip) {
+            chip.addEventListener("click", function () {
+              statusFilter = chip.getAttribute("data-status");
+              renderAll();
+            });
+          });
+          var sectionSel = document.getElementById("sectionFilterSel");
+          if (sectionSel) sectionSel.addEventListener("change", function () {
+            sectionFilter = sectionSel.value;
+            renderAll();
+          });
 
           /* Wire add form */
-          document.getElementById("addForm").addEventListener("submit", function (e) {
+          var addForm = document.getElementById("addForm");
+          if (addForm) addForm.addEventListener("submit", function (e) {
             e.preventDefault();
             var text = document.getElementById("newItemText").value.trim();
-            var detail = document.getElementById("newItemDetail").value.trim();
-            var section = document.getElementById("newItemSection").value.trim();
             if (!text) { toast("Type the item first"); document.getElementById("newItemText").focus(); return; }
-            addItem(list, text, detail, section);
+            addItem(list, {
+              text: text,
+              detail: document.getElementById("newItemDetail").value.trim(),
+              section: document.getElementById("newItemSection").value.trim(),
+              dueDate: cleanDue(document.getElementById("newItemDue").value),
+              priority: cleanPriority(document.getElementById("newItemPriority").value)
+            });
           });
 
           /* Wire item rows */
@@ -839,6 +1923,12 @@
                   '<div class="field"><label for="editSection-' + item.id + '">Section <span class="opt">(optional)</span></label>' +
                     '<input class="input" id="editSection-' + item.id + '" type="text" value="' + esc(item.section) + '" autocomplete="off" /></div>' +
                 "</div>" +
+                '<div class="add-row-2">' +
+                  '<div class="field"><label for="editDue-' + item.id + '">Due date <span class="opt">(optional)</span></label>' +
+                    '<input class="input" id="editDue-' + item.id + '" type="date" value="' + esc(item.dueDate) + '" /></div>' +
+                  '<div class="field"><label for="editPriority-' + item.id + '">Priority</label>' +
+                    '<select class="input" id="editPriority-' + item.id + '">' + priorityOptions(item.priority) + "</select></div>" +
+                "</div>" +
                 '<div class="edit-actions">' +
                   '<button class="btn btn-primary btn-sm" type="button" data-action="save-edit">Save changes</button>' +
                   '<button class="btn btn-outline btn-sm" type="button" data-action="cancel-edit">Cancel</button>' +
@@ -847,13 +1937,7 @@
           }
           var upDisabled = idx === 0 ? " disabled" : "";
           var downDisabled = idx === list.items.length - 1 ? " disabled" : "";
-          return '<li class="item' + (item.done ? " done" : "") + '" data-item-id="' + item.id + '" draggable="true">' +
-            '<span class="grip" title="Drag to reorder" aria-hidden="true">' + ICONS.grip + "</span>" +
-            '<button class="check" type="button" data-action="toggle" aria-pressed="' + (item.done ? "true" : "false") + '" aria-label="Mark \u201C' + esc(item.text) + "\u201D as " + (item.done ? "not done" : "done") + '">' + ICONS.checkBig + "</button>" +
-            '<div class="item-main">' +
-              '<div class="item-text">' + esc(item.text) + "</div>" +
-              (item.detail ? '<div class="item-detail">' + esc(item.detail) + "</div>" : "") +
-            "</div>" +
+          var tools = list.archived ? "" :
             '<div class="item-tools">' +
               '<div class="move-stack">' +
                 '<button class="icon-btn" type="button" data-action="up" aria-label="Move up"' + upDisabled + ">" + ICONS.up + "</button>" +
@@ -863,7 +1947,16 @@
                 '<button class="icon-btn" type="button" data-action="edit" aria-label="Edit item" title="Edit">' + ICONS.pencil + "</button>" +
                 '<button class="icon-btn danger" type="button" data-action="delete" aria-label="Delete item" title="Delete">' + ICONS.trash + "</button>" +
               "</div>" +
-            "</div></li>";
+            "</div>";
+          return '<li class="item' + (item.done ? " done" : "") + (isOverdue(item) ? " overdue" : "") + '" data-item-id="' + item.id + '"' + (list.archived ? "" : ' draggable="true"') + ">" +
+            (list.archived ? "" : '<span class="grip" title="Drag to reorder" aria-hidden="true">' + ICONS.grip + "</span>") +
+            '<button class="check" type="button" data-action="toggle" aria-pressed="' + (item.done ? "true" : "false") + '" aria-label="Mark \u201C' + esc(item.text) + "\u201D as " + (item.done ? "not done" : "done") + '"' + (list.archived ? " disabled" : "") + ">" + ICONS.checkBig + "</button>" +
+            '<div class="item-main">' +
+              '<div class="item-text">' + esc(item.text) + "</div>" +
+              (item.detail ? '<div class="item-detail">' + esc(item.detail) + "</div>" : "") +
+              itemMetaHtml(item) +
+            "</div>" +
+            tools + "</li>";
         }
 
         function wireItemRow(list, item) {
@@ -881,6 +1974,8 @@
               item.text = t;
               item.detail = document.getElementById("editDetail-" + item.id).value.trim();
               item.section = document.getElementById("editSection-" + item.id).value.trim();
+              item.dueDate = cleanDue(document.getElementById("editDue-" + item.id).value);
+              item.priority = cleanPriority(document.getElementById("editPriority-" + item.id).value);
               editingItemId = null;
               saveState(); renderAll();
               toast("Item updated");
@@ -894,7 +1989,9 @@
             return;
           }
 
-          row.querySelector('[data-action="toggle"]').addEventListener("click", function () { toggleItem(list, item); });
+          var toggleBtn = row.querySelector('[data-action="toggle"]');
+          if (toggleBtn) toggleBtn.addEventListener("click", function () { toggleItem(list, item); });
+          if (list.archived) return;
           row.querySelector('[data-action="edit"]').addEventListener("click", function () { editingItemId = item.id; renderAll(); });
           row.querySelector('[data-action="delete"]').addEventListener("click", function () { deleteItem(list, item); });
           var upBtn = row.querySelector('[data-action="up"]');
@@ -939,11 +2036,31 @@
         function renderAll() {
           renderSidebar();
           renderDetail();
+          refreshUndoBtn();
         }
 
+        /* ---------------- Search wiring ---------------- */
+        var searchInput = document.getElementById("globalSearch");
+        var searchbar = document.getElementById("searchbar");
+        function clearSearch() {
+          searchQuery = "";
+          searchInput.value = "";
+          searchbar.classList.remove("has-query");
+        }
+        searchInput.addEventListener("input", function () {
+          searchQuery = searchInput.value.trim();
+          searchbar.classList.toggle("has-query", !!searchQuery);
+          renderDetail();
+        });
+        document.getElementById("searchClear").addEventListener("click", function () {
+          clearSearch();
+          renderAll();
+          searchInput.focus();
+        });
+
         /* ---------------- Top buttons ---------------- */
-        document.getElementById("topNewBtn").addEventListener("click", promptNewChecklist);
-        document.getElementById("sideNewBtn").addEventListener("click", promptNewChecklist);
+        document.getElementById("topNewBtn").addEventListener("click", openTemplatePicker);
+        document.getElementById("sideNewBtn").addEventListener("click", openTemplatePicker);
 
         renderAll();
       })();
