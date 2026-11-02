@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Shared Checklist App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #edf1ec;
+        --bg-grad: #e3ebe1;
+        --surface: #ffffff;
+        --surface-2: #f5f7f4;
+        --surface-3: #eef3ee;
+        --ink: #18211b;
+        --ink-2: #334139;
+        --muted: #637165;
+        --line: #d7e0d7;
+        --line-strong: #bccabe;
+        --accent: #147052;
+        --accent-hover: #0f5c43;
+        --accent-ink: #ffffff;
+        --accent-soft: #dff0e4;
+        --accent-soft-ink: #0e4d36;
+        --gold: #b7791f;
+        --gold-soft: #fdf0d3;
+        --danger: #b42318;
+        --danger-hover: #912018;
+        --danger-soft: #fdecea;
+        --shadow: 0 1px 2px rgba(20, 35, 25, 0.06), 0 10px 30px rgba(20, 35, 25, 0.07);
+        --shadow-lg: 0 24px 60px rgba(15, 30, 20, 0.22);
+        --radius: 16px;
+        --radius-sm: 10px;
+        --focus: 0 0 0 3px rgba(20, 112, 82, 0.35);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f1411;
+          --bg-grad: #131a15;
+          --surface: #1a211c;
+          --surface-2: #212a23;
+          --surface-3: #27332a;
+          --ink: #edf3ee;
+          --ink-2: #c9d6cc;
+          --muted: #94a79a;
+          --line: #2e3b32;
+          --line-strong: #415347;
+          --accent: #2fae7d;
+          --accent-hover: #43c491;
+          --accent-ink: #08130d;
+          --accent-soft: #1d3a2b;
+          --accent-soft-ink: #9fe3c3;
+          --gold: #e9b84c;
+          --gold-soft: #3a2f14;
+          --danger: #ff8a80;
+          --danger-hover: #ffb0a8;
+          --danger-soft: #3d1d1a;
+          --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.35);
+          --shadow-lg: 0 24px 60px rgba(0,0,0,0.55);
+          --focus: 0 0 0 3px rgba(47, 174, 125, 0.45);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg-grad) 100%);
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+      }
+      button, input, textarea, select { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      :focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px; }
+
+      .app { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; }
+
+      /* ---------- Top strip ---------- */
+      .topstrip {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+      }
+      .topstrip .summary { font-size: 14px; color: var(--muted); font-weight: 600; }
+      .topstrip .summary strong { color: var(--ink); font-weight: 800; }
+
+      /* ---------- Buttons ---------- */
+      .btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        border: 1px solid transparent; border-radius: 999px;
+        padding: 10px 18px; font-weight: 700; font-size: 14.5px;
+        background: var(--surface); color: var(--ink);
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+        white-space: nowrap;
+      }
+      .btn:active { transform: translateY(1px); }
+      .btn svg { width: 17px; height: 17px; flex: none; }
+      .btn-primary { background: var(--accent); color: var(--accent-ink); }
+      .btn-primary:hover { background: var(--accent-hover); }
+      .btn-outline { border-color: var(--line-strong); background: var(--surface); }
+      .btn-outline:hover { background: var(--surface-2); }
+      .btn-ghost { background: transparent; }
+      .btn-ghost:hover { background: var(--surface-3); }
+      .btn-danger { background: var(--danger-soft); color: var(--danger); }
+      .btn-danger:hover { color: var(--danger-hover); }
+      .btn-sm { padding: 7px 13px; font-size: 13.5px; }
+      .btn[disabled] { opacity: 0.5; cursor: default; }
+
+      .icon-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; border-radius: 9px; border: 1px solid transparent;
+        background: transparent; color: var(--muted); flex: none;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .icon-btn:hover { background: var(--surface-3); color: var(--ink); }
+      .icon-btn svg { width: 17px; height: 17px; }
+      .icon-btn.danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+      /* ---------- Layout ---------- */
+      .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+
+      /* ---------- Sidebar ---------- */
+      .sidebar {
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--shadow);
+        padding: 14px; position: sticky; top: 16px;
+      }
+      .sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 12px; }
+      .sidebar-head h2 { font-size: 15px; font-weight: 800; margin: 0; letter-spacing: 0.01em; }
+      .nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+      .nav-item {
+        display: flex; align-items: stretch; gap: 4px;
+        border: 1.5px solid transparent; border-radius: 12px;
+        padding: 10px 10px 10px 12px; cursor: pointer; text-align: left;
+        background: transparent; width: 100%;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .nav-item:hover { background: var(--surface-2); }
+      .nav-item.active { background: var(--accent-soft); border-color: var(--accent); }
+      .nav-item .nav-main { flex: 1; min-width: 0; }
+      .nav-item .nav-name { font-weight: 700; font-size: 14.5px; line-height: 1.3; overflow-wrap: anywhere; }
+      .nav-item .nav-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; font-weight: 600; }
+      .nav-item.active .nav-meta { color: var(--accent-soft-ink); opacity: 0.85; }
+      .nav-star {
+        align-self: flex-start; width: 28px; height: 28px; border-radius: 8px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: transparent; border: none; color: var(--muted); flex: none;
+      }
+      .nav-star svg { width: 16px; height: 16px; }
+      .nav-star:hover { background: var(--gold-soft); color: var(--gold); }
+      .nav-star.is-default { color: var(--gold); }
+      .nav-star.is-default svg { fill: currentColor; }
+      .default-tag {
+        display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--gold); background: var(--gold-soft);
+        border-radius: 999px; padding: 2px 8px; margin-top: 5px;
+      }
+      .nav-empty { padding: 18px 10px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+      .sidebar .btn-new { width: 100%; justify-content: center; margin-top: 12px; }
+      .mini-progress { height: 5px; border-radius: 999px; background: var(--surface-3); margin-top: 8px; overflow: hidden; }
+      .mini-progress > div { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
+
+      /* ---------- Detail panel ---------- */
+      .detail {
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--shadow);
+        padding: 22px; min-height: 420px;
+      }
+      .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+      .detail-title-wrap { min-width: 0; flex: 1; }
+      .detail-title { font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0; overflow-wrap: anywhere; letter-spacing: -0.01em; }
+      .detail-sub { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+      .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      .badge-default {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 12px; font-weight: 800; color: var(--gold);
+        background: var(--gold-soft); border-radius: 999px; padding: 4px 11px;
+      }
+      .badge-default svg { width: 13px; height: 13px; fill: currentColor; }
+      .progress-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+      .progress-track { flex: 1; height: 9px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+      .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
+      .progress-label { font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+      /* ---------- Add item form ---------- */
+      .add-card {
+        margin-top: 20px; background: var(--surface-2); border: 1px solid var(--line);
+        border-radius: 14px; padding: 16px;
+      }
+      .add-card h3 { margin: 0 0 12px; font-size: 14px; font-weight: 800; }
+      .add-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+      .add-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 5px; }
+      .field label .opt { font-weight: 600; opacity: 0.75; }
+      .input, .textarea {
+        width: 100%; border: 1.5px solid var(--line-strong); border-radius: 10px;
+        background: var(--surface); padding: 10px 12px; font-size: 15px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .input:focus, .textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus); }
+      .textarea { resize: vertical; min-height: 40px; }
+      .add-card .btn { margin-top: 12px; }
+
+      /* ---------- Items ---------- */
+      .items-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 24px 0 6px; }
+      .items-head h3 { margin: 0; font-size: 14px; font-weight: 800; }
+      .section-head {
+        display: flex; align-items: center; gap: 10px;
+        margin: 20px 2px 8px; font-size: 13px; font-weight: 800; color: var(--ink-2);
+      }
+      .section-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+      .section-head:first-of-type { margin-top: 10px; }
+      .items-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+      .item {
+        display: flex; align-items: flex-start; gap: 12px;
+        border: 1.5px solid var(--line); border-radius: 13px;
+        background: var(--surface); padding: 12px 12px 12px 14px;
+        transition: border-color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+      }
+      .item:hover { border-color: var(--line-strong); }
+      .item.dragging { opacity: 0.45; }
+      .item.drag-over { border-color: var(--accent); background: var(--accent-soft); }
+      .item.done { background: var(--surface-2); }
+      .grip {
+        color: var(--muted); cursor: grab; padding: 8px 2px 0; flex: none;
+        display: inline-flex; touch-action: none;
+      }
+      .grip:active { cursor: grabbing; }
+      .grip svg { width: 16px; height: 20px; }
+
+      /* The checkbox: large, white, thick black border, bold black check — in both color schemes. */
+      .check {
+        flex: none; width: 38px; height: 38px; margin-top: 1px;
+        background: #ffffff; border: 3.5px solid #000000; border-radius: 9px;
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0; transition: transform 0.08s ease;
+      }
+      .check:active { transform: scale(0.93); }
+      .check svg { width: 26px; height: 26px; display: none; }
+      .check[aria-pressed="true"] svg { display: block; }
+
+      .item-main { flex: 1; min-width: 0; padding-top: 6px; }
+      .item-text { font-size: 15.5px; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
+      .item.done .item-text { text-decoration: line-through; color: var(--muted); }
+      .item-detail { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin-top: 3px; overflow-wrap: anywhere; white-space: pre-wrap; }
+      .item.done .item-detail { color: var(--muted); opacity: 0.8; }
+      .item-tools { display: flex; flex-direction: column; align-items: center; gap: 1px; flex: none; }
+      .item-tools .row-tools { display: flex; gap: 1px; }
+      .move-stack { display: flex; flex-direction: column; }
+      .move-stack .icon-btn { width: 26px; height: 22px; border-radius: 6px; }
+      .move-stack .icon-btn svg { width: 14px; height: 14px; }
+      .move-stack .icon-btn[disabled] { opacity: 0.3; cursor: default; background: transparent; }
+
+      /* Item edit form inside a row */
+      .edit-form { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+      .edit-form .edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+      .items-empty { text-align: center; padding: 34px 16px; color: var(--muted); }
+      .items-empty p { margin: 0; font-size: 14.5px; line-height: 1.6; }
+
+      /* ---------- Big empty state ---------- */
+      .empty-state { text-align: center; padding: 46px 20px 40px; }
+      .empty-art { display: inline-flex; margin-bottom: 20px; }
+      .empty-state h2 { font-size: 24px; font-weight: 800; margin: 0 0 10px; letter-spacing: -0.01em; }
+      .empty-state p { color: var(--muted); font-size: 15px; line-height: 1.65; margin: 0 auto 22px; max-width: 420px; }
+
+      /* ---------- Modal ---------- */
+      .modal-overlay {
+        position: fixed; inset: 0; background: rgba(10, 18, 13, 0.55);
+        display: none; align-items: center; justify-content: center;
+        padding: 18px; z-index: 50; backdrop-filter: blur(2px);
+      }
+      .modal-overlay.open { display: flex; }
+      .modal {
+        background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-lg);
+        width: 100%; max-width: 430px; padding: 24px; border: 1px solid var(--line);
+      }
+      .modal h3 { margin: 0 0 8px; font-size: 19px; font-weight: 800; }
+      .modal p { margin: 0 0 16px; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+      .modal .field { margin-bottom: 16px; }
+      .modal-actions { display: flex; gap: 9px; justify-content: flex-end; flex-wrap: wrap; }
+      .btn-danger-solid { background: var(--danger); color: #fff; }
+      @media (prefers-color-scheme: dark) { .btn-danger-solid { color: #1c0b09; background: var(--danger); } }
+      .btn-danger-solid:hover { background: var(--danger-hover); }
+
+      /* ---------- Toast ---------- */
+      .toast {
+        position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 16px);
+        background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 700;
+        padding: 11px 20px; border-radius: 999px; box-shadow: var(--shadow-lg);
+        opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 60; max-width: calc(100vw - 32px); text-align: center;
+      }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+      /* ---------- Responsive ---------- */
+      @media (max-width: 820px) {
+        .app { padding: 14px 12px 40px; }
+        .layout { grid-template-columns: 1fr; }
+        .sidebar { position: static; }
+        .nav-list { max-height: 264px; overflow-y: auto; }
+        .detail { padding: 18px 15px; }
+        .detail-title { font-size: 22px; }
+        .add-row-2 { grid-template-columns: 1fr; }
+        .item { padding: 11px 9px 11px 11px; gap: 9px; }
+        .check { width: 36px; height: 36px; }
+        .grip { display: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+      }
+      @media print {
+        .sidebar, .add-card, .topstrip, .detail-actions, .item-tools, .items-head .btn { display: none !important; }
+        .layout { grid-template-columns: 1fr; }
+        body { background: #fff; }
+        .detail { border: none; box-shadow: none; }
+        .check { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="topstrip">
+        <div class="summary" id="summaryLine">No checklists yet</div>
+        <button class="btn btn-primary" id="topNewBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          New checklist
+        </button>
+      </div>
+
+      <div class="layout">
+        <aside class="sidebar" aria-label="Your checklists">
+          <div class="sidebar-head">
+            <h2>Checklists</h2>
+            <span class="summary" id="sidebarCount" style="font-size:12.5px; color:var(--muted); font-weight:700;"></span>
+          </div>
+          <div id="navRegion"></div>
+          <button class="btn btn-outline btn-new" id="sideNewBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New checklist
+          </button>
+        </aside>
+
+        <main class="detail" id="detailRegion" aria-live="polite"></main>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal">
+        <h3 id="modalTitle"></h3>
+        <p id="modalText" style="display:none;"></p>
+        <div class="field" id="modalField" style="display:none;">
+          <label for="modalInput" id="modalLabel"></label>
+          <input class="input" id="modalInput" type="text" autocomplete="off" />
+        </div>
+        <div class="modal-actions" id="modalActions"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var STORAGE_KEY = "shared-checklist-app:v1";
+
+        /* ---------------- Icons (inline SVG, Lucide-style paths) ---------------- */
+        var ICONS = {
+          star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>',
+          pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>',
+          trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>',
+          grip: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.6"/><circle cx="15" cy="5" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="19" r="1.6"/><circle cx="15" cy="19" r="1.6"/></svg>',
+          up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>',
+          down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+          plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+          checkBig: '<svg viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.8 9.2 18.5 20.5 6"/></svg>',
+          eraser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>'
+        };
+
+        /* ---------------- State ---------------- */
+        var uidCounter = 0;
+        function makeId(taken) {
+          var candidate;
+          do {
+            uidCounter++;
+            candidate =
+              Date.now().toString(36) + "-" + uidCounter.toString(36) + "-" +
+              Math.floor(Math.random() * 1e9).toString(36) + "-" +
+              Math.floor(performance.now() * 1000).toString(36);
+          } while (taken && taken.has(candidate));
+          if (taken) taken.add(candidate);
+          return candidate;
+        }
+        function takenIds() {
+          var s = new Set();
+          state.checklists.forEach(function (l) {
+            s.add(l.id);
+            l.items.forEach(function (it) { s.add(it.id); });
+          });
+          return s;
+        }
+        function uid() { return makeId(takenIds()); }
+
+        function loadState() {
+          try {
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return { checklists: [], defaultId: null };
+            var parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.checklists)) return { checklists: [], defaultId: null };
+            var taken = new Set();
+            var lists = parsed.checklists.filter(function (l) {
+              return l && typeof l.id === "string" && typeof l.name === "string" && Array.isArray(l.items);
+            }).map(function (l) {
+              var listId = taken.has(l.id) ? makeId(taken) : (taken.add(l.id), l.id);
+              return {
+                id: listId,
+                name: l.name,
+                createdAt: typeof l.createdAt === "number" ? l.createdAt : 0,
+                items: l.items.filter(function (it) { return it && typeof it.id === "string" && typeof it.text === "string"; }).map(function (it) {
+                  var itemId = taken.has(it.id) ? makeId(taken) : (taken.add(it.id), it.id);
+                  return {
+                    id: itemId,
+                    text: it.text,
+                    detail: typeof it.detail === "string" ? it.detail : "",
+                    section: typeof it.section === "string" ? it.section : "",
+                    done: !!it.done
+                  };
+                })
+              };
+            });
+            var def = typeof parsed.defaultId === "string" ? parsed.defaultId : null;
+            if (def && !lists.some(function (l) { return l.id === def; })) def = null;
+            return { checklists: lists, defaultId: def };
+          } catch (e) {
+            return { checklists: [], defaultId: null };
+          }
+        }
+
+        function saveState() {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* storage full or unavailable */ }
+        }
+
+        var state = loadState();
+        var activeId = null;
+        var editingItemId = null;
+        var dragItemId = null;
+
+        function findList(id) {
+          for (var i = 0; i < state.checklists.length; i++) {
+            if (state.checklists[i].id === id) return state.checklists[i];
+          }
+          return null;
+        }
+        function newestList() {
+          var best = null;
+          state.checklists.forEach(function (l) { if (!best || l.createdAt >= best.createdAt) best = l; });
+          return best;
+        }
+        function resolveOpenListId() {
+          if (state.defaultId && findList(state.defaultId)) return state.defaultId;
+          var n = newestList();
+          return n ? n.id : null;
+        }
+        function activeList() { return activeId ? findList(activeId) : null; }
+
+        activeId = resolveOpenListId();
+        saveState(); /* persist any id repairs made while loading */
+
+        /* ---------------- Helpers ---------------- */
+        function esc(s) {
+          return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        }
+        function counts(list) {
+          var done = 0;
+          list.items.forEach(function (it) { if (it.done) done++; });
+          return { total: list.items.length, done: done };
+        }
+        function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+
+        var toastTimer = null;
+        function toast(msg) {
+          var el = document.getElementById("toast");
+          el.textContent = msg;
+          el.classList.add("show");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2400);
+        }
+
+        /* ---------------- Modal ---------------- */
+        var overlay = document.getElementById("modalOverlay");
+        var modalTitle = document.getElementById("modalTitle");
+        var modalText = document.getElementById("modalText");
+        var modalField = document.getElementById("modalField");
+        var modalLabel = document.getElementById("modalLabel");
+        var modalInput = document.getElementById("modalInput");
+        var modalActions = document.getElementById("modalActions");
+        var modalConfirm = null;
+
+        function openModal(opts) {
+          modalTitle.textContent = opts.title;
+          if (opts.text) { modalText.textContent = opts.text; modalText.style.display = ""; }
+          else { modalText.style.display = "none"; }
+          if (opts.inputLabel != null) {
+            modalField.style.display = "";
+            modalLabel.textContent = opts.inputLabel;
+            modalInput.value = opts.inputValue || "";
+            modalInput.placeholder = opts.inputPlaceholder || "";
+          } else {
+            modalField.style.display = "none";
+          }
+          modalActions.innerHTML = "";
+          var cancel = document.createElement("button");
+          cancel.type = "button"; cancel.className = "btn btn-outline"; cancel.textContent = "Cancel";
+          cancel.addEventListener("click", closeModal);
+          modalActions.appendChild(cancel);
+          var confirm = document.createElement("button");
+          confirm.type = "button";
+          confirm.className = "btn " + (opts.danger ? "btn-danger-solid" : "btn-primary");
+          confirm.textContent = opts.confirmLabel || "Save";
+          modalConfirm = function () {
+            var val = opts.inputLabel != null ? modalInput.value : null;
+            closeModal();
+            opts.onConfirm(val);
+          };
+          confirm.addEventListener("click", modalConfirm);
+          modalActions.appendChild(confirm);
+          overlay.classList.add("open");
+          if (opts.inputLabel != null) {
+            setTimeout(function () { modalInput.focus(); modalInput.select(); }, 30);
+          } else {
+            setTimeout(function () { confirm.focus(); }, 30);
+          }
+        }
+        function closeModal() { overlay.classList.remove("open"); modalConfirm = null; }
+        overlay.addEventListener("click", function (e) { if (e.target === overlay) closeModal(); });
+        modalInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && modalConfirm) { e.preventDefault(); modalConfirm(); }
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
+        });
+
+        /* ---------------- Checklist actions ---------------- */
+        function createChecklist(name) {
+          var list = { id: uid(), name: name, createdAt: Date.now(), items: [] };
+          state.checklists.push(list);
+          activeId = list.id;
+          editingItemId = null;
+          saveState(); renderAll();
+          toast("Checklist created");
+          var input = document.getElementById("newItemText");
+          if (input) input.focus();
+        }
+        function promptNewChecklist() {
+          openModal({
+            title: "New checklist",
+            inputLabel: "Checklist name",
+            inputValue: "",
+            inputPlaceholder: "For example: Groceries, Packing, Weekly chores",
+            confirmLabel: "Create checklist",
+            onConfirm: function (val) {
+              var name = (val || "").trim();
+              if (!name) { toast("Give the checklist a name first"); return; }
+              createChecklist(name);
+            }
+          });
+        }
+        function promptRenameChecklist(list) {
+          openModal({
+            title: "Rename checklist",
+            inputLabel: "Checklist name",
+            inputValue: list.name,
+            confirmLabel: "Rename",
+            onConfirm: function (val) {
+              var name = (val || "").trim();
+              if (!name) { toast("The name cannot be empty"); return; }
+              list.name = name;
+              saveState(); renderAll();
+              toast("Checklist renamed");
+            }
+          });
+        }
+        function confirmDeleteChecklist(list) {
+          var c = counts(list);
+          openModal({
+            title: "Delete this checklist?",
+            text: "\u201C" + list.name + "\u201D and its " + plural(c.total, "item") + " will be deleted. This cannot be undone.",
+            confirmLabel: "Delete checklist",
+            danger: true,
+            onConfirm: function () {
+              var wasDefault = state.defaultId === list.id;
+              state.checklists = state.checklists.filter(function (l) { return l.id !== list.id; });
+              if (wasDefault) state.defaultId = null;
+              if (activeId === list.id) {
+                editingItemId = null;
+                activeId = resolveOpenListId();
+              }
+              saveState(); renderAll();
+              toast("Checklist deleted");
+            }
+          });
+        }
+        function setDefault(list) {
+          state.defaultId = list.id;
+          saveState(); renderAll();
+          toast("\u201C" + list.name + "\u201D opens first from now on");
+        }
+
+        /* ---------------- Item actions ---------------- */
+        function addItem(list, text, detail, section) {
+          list.items.push({ id: uid(), text: text, detail: detail, section: section, done: false });
+          saveState(); renderAll();
+          var input = document.getElementById("newItemText");
+          if (input) input.focus();
+        }
+        function toggleItem(list, item) {
+          item.done = !item.done;
+          saveState(); renderAll();
+        }
+        function deleteItem(list, item) {
+          list.items = list.items.filter(function (it) { return it.id !== item.id; });
+          if (editingItemId === item.id) editingItemId = null;
+          saveState(); renderAll();
+          toast("Item deleted");
+        }
+        function moveItem(list, item, dir) {
+          var idx = list.items.indexOf(item);
+          var target = idx + dir;
+          if (target < 0 || target >= list.items.length) return;
+          var tmp = list.items[target];
+          list.items[target] = item;
+          list.items[idx] = tmp;
+          saveState(); renderAll();
+        }
+        function clearChecked(list) {
+          list.items = list.items.filter(function (it) { return !it.done; });
+          editingItemId = null;
+          saveState(); renderAll();
+          toast("Checked items cleared");
+        }
+
+        /* ---------------- Rendering: sidebar ---------------- */
+        var navRegion = document.getElementById("navRegion");
+        var detailRegion = document.getElementById("detailRegion");
+        var summaryLine = document.getElementById("summaryLine");
+        var sidebarCount = document.getElementById("sidebarCount");
+
+        function renderSidebar() {
+          sidebarCount.textContent = state.checklists.length ? plural(state.checklists.length, "list") : "";
+          var totalItems = 0, totalDone = 0;
+          state.checklists.forEach(function (l) { var c = counts(l); totalItems += c.total; totalDone += c.done; });
+          summaryLine.innerHTML = state.checklists.length
+            ? "<strong>" + plural(state.checklists.length, "checklist") + "</strong> &middot; " + totalDone + " of " + plural(totalItems, "item") + " checked off"
+            : "No checklists yet";
+
+          if (!state.checklists.length) {
+            navRegion.innerHTML = '<div class="nav-empty">Nothing here yet.<br />Create your first checklist to get started.</div>';
+            return;
+          }
+          var sorted = state.checklists.map(function (l, i) { return [l, i]; })
+            .sort(function (a, b) { return (b[0].createdAt - a[0].createdAt) || (b[1] - a[1]); })
+            .map(function (pair) { return pair[0]; });
+          var ul = document.createElement("ul");
+          ul.className = "nav-list";
+          sorted.forEach(function (list) {
+            var c = counts(list);
+            var li = document.createElement("li");
+            var row = document.createElement("div");
+            row.className = "nav-item" + (list.id === activeId ? " active" : "");
+            row.setAttribute("role", "button");
+            row.setAttribute("tabindex", "0");
+            row.setAttribute("aria-label", "Open checklist " + list.name);
+            var pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
+            var main = document.createElement("div");
+            main.className = "nav-main";
+            main.innerHTML =
+              '<div class="nav-name">' + esc(list.name) + "</div>" +
+              '<div class="nav-meta">' + (c.total ? c.done + " of " + c.total + " done" : "No items yet") + "</div>" +
+              (c.total ? '<div class="mini-progress"><div style="width:' + pct + '%"></div></div>' : "") +
+              (state.defaultId === list.id ? '<span class="default-tag">Opens first</span>' : "");
+            var star = document.createElement("button");
+            star.type = "button";
+            star.className = "nav-star" + (state.defaultId === list.id ? " is-default" : "");
+            star.innerHTML = ICONS.star;
+            star.title = state.defaultId === list.id ? "This list opens first" : "Make this list open first";
+            star.setAttribute("aria-label", state.defaultId === list.id ? list.name + " opens first" : "Make " + list.name + " open first");
+            star.addEventListener("click", function (e) {
+              e.stopPropagation();
+              if (state.defaultId !== list.id) setDefault(list);
+            });
+            row.appendChild(main);
+            row.appendChild(star);
+            row.addEventListener("click", function () {
+              activeId = list.id; editingItemId = null; renderAll();
+            });
+            row.addEventListener("keydown", function (e) {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activeId = list.id; editingItemId = null; renderAll(); }
+            });
+            li.appendChild(row);
+            ul.appendChild(li);
+          });
+          navRegion.innerHTML = "";
+          navRegion.appendChild(ul);
+        }
+
+        /* ---------------- Rendering: detail ---------------- */
+        function renderDetail() {
+          var list = activeList();
+          if (!list) {
+            detailRegion.innerHTML =
+              '<div class="empty-state">' +
+                '<span class="empty-art" aria-hidden="true">' +
+                  '<svg width="92" height="92" viewBox="0 0 92 92" fill="none">' +
+                    '<rect x="10" y="10" width="72" height="72" rx="16" fill="var(--surface-2)" stroke="var(--line-strong)" stroke-width="2"/>' +
+                    '<rect x="24" y="25" width="17" height="17" rx="4" fill="#ffffff" stroke="#000000" stroke-width="3.5"/>' +
+                    '<path d="M28 33.5 31.8 37.3 37.5 29.8" stroke="#000000" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+                    '<line x1="49" y1="33.5" x2="69" y2="33.5" stroke="var(--line-strong)" stroke-width="4" stroke-linecap="round"/>' +
+                    '<rect x="24" y="52" width="17" height="17" rx="4" fill="#ffffff" stroke="#000000" stroke-width="3.5"/>' +
+                    '<line x1="49" y1="60.5" x2="69" y2="60.5" stroke="var(--line-strong)" stroke-width="4" stroke-linecap="round"/>' +
+                  "</svg>" +
+                "</span>" +
+                "<h2>Start your first checklist</h2>" +
+                "<p>Create a list for groceries, packing, a project, or anything else you want to track, then add items and check them off as you go.</p>" +
+                '<button class="btn btn-primary" id="emptyNewBtn" type="button">' + ICONS.plus + " Create a checklist</button>" +
+              "</div>";
+            document.getElementById("emptyNewBtn").addEventListener("click", promptNewChecklist);
+            return;
+          }
+
+          var c = counts(list);
+          var pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
+          var isDefault = state.defaultId === list.id;
+          var sections = [];
+          list.items.forEach(function (it) {
+            var s = (it.section || "").trim();
+            if (s && sections.indexOf(s) === -1) sections.push(s);
+          });
+
+          var html = "";
+          html += '<div class="detail-head"><div class="detail-title-wrap">';
+          html += '<h1 class="detail-title">' + esc(list.name) + "</h1>";
+          html += '<div class="detail-sub">';
+          if (isDefault) html += '<span class="badge-default">' + ICONS.star + " Opens first</span>";
+          html += '<span style="font-size:13px; color:var(--muted); font-weight:600;">' + plural(c.total, "item") + "</span>";
+          html += "</div></div>";
+          html += '<div class="detail-actions">';
+          if (!isDefault) html += '<button class="btn btn-outline btn-sm" id="setDefaultBtn" type="button">' + ICONS.star + " Set as default</button>";
+          html += '<button class="btn btn-outline btn-sm" id="renameBtn" type="button">' + ICONS.pencil + " Rename</button>";
+          html += '<button class="btn btn-danger btn-sm" id="deleteListBtn" type="button">' + ICONS.trash + " Delete list</button>";
+          html += "</div></div>";
+
+          if (c.total) {
+            html += '<div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+              '<div class="progress-label">' + c.done + " of " + c.total + " done</div></div>";
+          }
+
+          /* Add item form */
+          html += '<form class="add-card" id="addForm"><h3>Add an item</h3><div class="add-grid">';
+          html += '<div class="field"><label for="newItemText">Item</label>' +
+            '<input class="input" id="newItemText" type="text" placeholder="What needs doing?" autocomplete="off" /></div>';
+          html += '<div class="add-row-2">';
+          html += '<div class="field"><label for="newItemDetail">Detail <span class="opt">(optional)</span></label>' +
+            '<input class="input" id="newItemDetail" type="text" placeholder="A note, a quantity, a link\u2026" autocomplete="off" /></div>';
+          html += '<div class="field"><label for="newItemSection">Section <span class="opt">(optional)</span></label>' +
+            '<input class="input" id="newItemSection" type="text" placeholder="For example: Produce" autocomplete="off" list="sectionList" />' +
+            '<datalist id="sectionList">' + sections.map(function (s) { return "<option value=\"" + esc(s) + "\"></option>"; }).join("") + "</datalist></div>";
+          html += "</div></div>";
+          html += '<button class="btn btn-primary" type="submit">' + ICONS.plus + " Add item</button></form>";
+
+          /* Items */
+          html += '<div class="items-head"><h3>Items</h3>';
+          if (c.done) html += '<button class="btn btn-ghost btn-sm" id="clearCheckedBtn" type="button">' + ICONS.eraser + " Clear checked</button>";
+          html += "</div>";
+
+          if (!list.items.length) {
+            html += '<div class="items-empty"><p>No items in this list yet.<br />Add your first item using the form above.</p></div>';
+          } else {
+            var body = "";
+            var prevSection = "\u0000unset";
+            list.items.forEach(function (item, idx) {
+              var sec = (item.section || "").trim();
+              if (sec !== prevSection) {
+                if (sec) body += '<div class="section-head">' + esc(sec) + "</div>";
+                else if (prevSection !== "\u0000unset") body += '<div class="section-head">Other items</div>';
+                body += '<ul class="items-list">';
+                prevSection = sec;
+              }
+              body += itemHtml(list, item, idx);
+              var next = list.items[idx + 1];
+              var nextSec = next ? (next.section || "").trim() : null;
+              if (!next || nextSec !== sec) body += "</ul>";
+            });
+            html += body;
+          }
+
+          detailRegion.innerHTML = html;
+
+          /* Wire header actions */
+          var setDefBtn = document.getElementById("setDefaultBtn");
+          if (setDefBtn) setDefBtn.addEventListener("click", function () { setDefault(list); });
+          document.getElementById("renameBtn").addEventListener("click", function () { promptRenameChecklist(list); });
+          document.getElementById("deleteListBtn").addEventListener("click", function () { confirmDeleteChecklist(list); });
+          var clearBtn = document.getElementById("clearCheckedBtn");
+          if (clearBtn) clearBtn.addEventListener("click", function () { clearChecked(list); });
+
+          /* Wire add form */
+          document.getElementById("addForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+            var text = document.getElementById("newItemText").value.trim();
+            var detail = document.getElementById("newItemDetail").value.trim();
+            var section = document.getElementById("newItemSection").value.trim();
+            if (!text) { toast("Type the item first"); document.getElementById("newItemText").focus(); return; }
+            addItem(list, text, detail, section);
+          });
+
+          /* Wire item rows */
+          list.items.forEach(function (item) { wireItemRow(list, item); });
+        }
+
+        function itemHtml(list, item, idx) {
+          if (editingItemId === item.id) {
+            return '<li class="item" data-item-id="' + item.id + '">' +
+              '<div class="edit-form">' +
+                '<div class="field"><label for="editText-' + item.id + '">Item</label>' +
+                  '<input class="input" id="editText-' + item.id + '" type="text" value="' + esc(item.text) + '" autocomplete="off" /></div>' +
+                '<div class="add-row-2">' +
+                  '<div class="field"><label for="editDetail-' + item.id + '">Detail <span class="opt">(optional)</span></label>' +
+                    '<input class="input" id="editDetail-' + item.id + '" type="text" value="' + esc(item.detail) + '" autocomplete="off" /></div>' +
+                  '<div class="field"><label for="editSection-' + item.id + '">Section <span class="opt">(optional)</span></label>' +
+                    '<input class="input" id="editSection-' + item.id + '" type="text" value="' + esc(item.section) + '" autocomplete="off" /></div>' +
+                "</div>" +
+                '<div class="edit-actions">' +
+                  '<button class="btn btn-primary btn-sm" type="button" data-action="save-edit">Save changes</button>' +
+                  '<button class="btn btn-outline btn-sm" type="button" data-action="cancel-edit">Cancel</button>' +
+                "</div>" +
+              "</div></li>";
+          }
+          var upDisabled = idx === 0 ? " disabled" : "";
+          var downDisabled = idx === list.items.length - 1 ? " disabled" : "";
+          return '<li class="item' + (item.done ? " done" : "") + '" data-item-id="' + item.id + '" draggable="true">' +
+            '<span class="grip" title="Drag to reorder" aria-hidden="true">' + ICONS.grip + "</span>" +
+            '<button class="check" type="button" data-action="toggle" aria-pressed="' + (item.done ? "true" : "false") + '" aria-label="Mark \u201C' + esc(item.text) + "\u201D as " + (item.done ? "not done" : "done") + '">' + ICONS.checkBig + "</button>" +
+            '<div class="item-main">' +
+              '<div class="item-text">' + esc(item.text) + "</div>" +
+              (item.detail ? '<div class="item-detail">' + esc(item.detail) + "</div>" : "") +
+            "</div>" +
+            '<div class="item-tools">' +
+              '<div class="move-stack">' +
+                '<button class="icon-btn" type="button" data-action="up" aria-label="Move up"' + upDisabled + ">" + ICONS.up + "</button>" +
+                '<button class="icon-btn" type="button" data-action="down" aria-label="Move down"' + downDisabled + ">" + ICONS.down + "</button>" +
+              "</div>" +
+              '<div class="row-tools">' +
+                '<button class="icon-btn" type="button" data-action="edit" aria-label="Edit item" title="Edit">' + ICONS.pencil + "</button>" +
+                '<button class="icon-btn danger" type="button" data-action="delete" aria-label="Delete item" title="Delete">' + ICONS.trash + "</button>" +
+              "</div>" +
+            "</div></li>";
+        }
+
+        function wireItemRow(list, item) {
+          var row = detailRegion.querySelector('[data-item-id="' + item.id + '"]');
+          if (!row) return;
+
+          if (editingItemId === item.id) {
+            var saveBtn = row.querySelector('[data-action="save-edit"]');
+            var cancelBtn = row.querySelector('[data-action="cancel-edit"]');
+            var textInput = document.getElementById("editText-" + item.id);
+            if (textInput) { textInput.focus(); textInput.select(); }
+            function doSave() {
+              var t = document.getElementById("editText-" + item.id).value.trim();
+              if (!t) { toast("The item cannot be empty"); return; }
+              item.text = t;
+              item.detail = document.getElementById("editDetail-" + item.id).value.trim();
+              item.section = document.getElementById("editSection-" + item.id).value.trim();
+              editingItemId = null;
+              saveState(); renderAll();
+              toast("Item updated");
+            }
+            saveBtn.addEventListener("click", doSave);
+            cancelBtn.addEventListener("click", function () { editingItemId = null; renderAll(); });
+            row.addEventListener("keydown", function (e) {
+              if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); doSave(); }
+              if (e.key === "Escape") { editingItemId = null; renderAll(); }
+            });
+            return;
+          }
+
+          row.querySelector('[data-action="toggle"]').addEventListener("click", function () { toggleItem(list, item); });
+          row.querySelector('[data-action="edit"]').addEventListener("click", function () { editingItemId = item.id; renderAll(); });
+          row.querySelector('[data-action="delete"]').addEventListener("click", function () { deleteItem(list, item); });
+          var upBtn = row.querySelector('[data-action="up"]');
+          var downBtn = row.querySelector('[data-action="down"]');
+          if (upBtn) upBtn.addEventListener("click", function () { moveItem(list, item, -1); });
+          if (downBtn) downBtn.addEventListener("click", function () { moveItem(list, item, 1); });
+
+          /* Drag to reorder */
+          row.addEventListener("dragstart", function (e) {
+            dragItemId = item.id;
+            row.classList.add("dragging");
+            try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", item.id); } catch (err) {}
+          });
+          row.addEventListener("dragend", function () {
+            dragItemId = null;
+            detailRegion.querySelectorAll(".item").forEach(function (el) { el.classList.remove("dragging", "drag-over"); });
+          });
+          row.addEventListener("dragover", function (e) {
+            if (!dragItemId || dragItemId === item.id) return;
+            e.preventDefault();
+            try { e.dataTransfer.dropEffect = "move"; } catch (err) {}
+            row.classList.add("drag-over");
+          });
+          row.addEventListener("dragleave", function () { row.classList.remove("drag-over"); });
+          row.addEventListener("drop", function (e) {
+            e.preventDefault();
+            row.classList.remove("drag-over");
+            if (!dragItemId || dragItemId === item.id) return;
+            var fromIdx = -1, toIdx = -1;
+            list.items.forEach(function (it, i) {
+              if (it.id === dragItemId) fromIdx = i;
+              if (it.id === item.id) toIdx = i;
+            });
+            if (fromIdx === -1 || toIdx === -1) return;
+            var moved = list.items.splice(fromIdx, 1)[0];
+            list.items.splice(toIdx, 0, moved);
+            dragItemId = null;
+            saveState(); renderAll();
+          });
+        }
+
+        function renderAll() {
+          renderSidebar();
+          renderDetail();
+        }
+
+        /* ---------------- Top buttons ---------------- */
+        document.getElementById("topNewBtn").addEventListener("click", promptNewChecklist);
+        document.getElementById("sideNewBtn").addEventListener("click", promptNewChecklist);
+
+        renderAll();
+      })();
+    </script>
+  </body>
+</html>
